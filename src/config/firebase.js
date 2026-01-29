@@ -4,9 +4,9 @@ import { getFirestore, setDoc, doc, collection, query, where, getDocs } from "fi
 import { Await } from "react-router-dom";
 import { toast } from "react-toastify";
 const firebaseConfig = {
-  apiKey: "your own key",
-  authDomain: "chat-app-57bc1.firebaseapp.com",
-  projectId: "chat-app-57bc1",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: "chat-app-57bc1.firebasestorage.app",
   messagingSenderId: "212375693848",
   appId: "1:212375693848:web:f564405b3d1a0d1b12b16d",
