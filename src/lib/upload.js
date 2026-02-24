@@ -1,43 +1,21 @@
-import {
-  getStorage,
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-} from "firebase/storage";
-import { redirectDocument } from "react-router-dom";
+import { supabase } from "../config/supabase";
 
 const upload = async (file) => {
-  const storage = getStorage();
-  const storageRef = ref(storage, `images/${Date.now()+file.name}`);
+  // Remove spaces and special characters from filename
+  const sanitizedName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+  const fileName = `${Date.now()}_${sanitizedName}`;
 
-    const uploadTask = uploadBytesResumable(storageRef, file);
-    
-    return new Promise((resolve,reject) => {
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            const progress =
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log("Upload is " + progress + "% done");
-            switch (snapshot.state) {
-              case "paused":
-                console.log("Upload is paused");
-                break;
-              case "running":
-                console.log("Upload is running");
-                break;
-            }
-          },
-          (error) => {},
-          () => {
-            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-              resolve(downloadURL);
-            });
-          },
-        );
-    })
-  
+  const { data, error } = await supabase.storage
+    .from("chat-images")
+    .upload(fileName, file);
+
+  if (error) throw error;
+
+  const { data: urlData } = supabase.storage
+    .from("chat-images")
+    .getPublicUrl(data.path);
+
+  return urlData.publicUrl;
 };
-
 
 export default upload;

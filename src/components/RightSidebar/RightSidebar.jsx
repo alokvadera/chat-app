@@ -1,53 +1,65 @@
-import React, { useContext, useEffect, useState } from 'react'
-import './RightSidebar.css'
+import React, { useContext, useEffect, useMemo, useState } from "react";
+import "./RightSidebar.css";
 import assets from "../../assets/assets";
-import { logout } from '../../config/firebase';
-import { AppContext } from '../../context/AppContext';
+import { supabase } from "../../config/supabase";
+import { AppContext } from "../../context/AppContextObject";
 
 const RightSidebar = () => {
-
   const { chatUser, messages } = useContext(AppContext);
-  const [msgImages, setMsgImages ] = useState([]);
+  const [now, setNow] = useState(() => Date.now());
+  const chatUserAvatar = chatUser?.userData?.avatar || assets.avatar_icon;
+
+  const msgImages = useMemo(
+    () => messages.filter((msg) => msg.image).map((msg) => msg.image),
+    [messages],
+  );
+
   useEffect(() => {
-    let tempVar = [];
-    messages.forEach((msg) => {
-      if (msg.image) {
-        tempVar.push(msg.image)
-      }
-    })
-    setMsgImages(tempVar);
-  },[messages])
+    const interval = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const isOnline =
+    now - (chatUser?.userData?.last_seen ? Number(chatUser.userData.last_seen) : 0) <=
+    70000;
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   return chatUser ? (
     <div className="rs">
       <div className="rs-profile">
-        <img src={chatUser.userData.avatar} alt="" />
+        <img src={chatUserAvatar} alt="" />
         <h3>
-          {Date.now() - chatUser.userData.lastSeen <=70000 ? <img src={assets.green_dot} className="dot" alt="" />: null}
-         {chatUser.userData.name} 
+          {isOnline ? (
+            <img src={assets.green_dot} className="dot" alt="" />
+          ) : null}
+          {chatUser.userData.name}
         </h3>
         <p>{chatUser.userData.bio}</p>
       </div>
       <hr />
       <div className="rs-media">
         <p>Media</p>
-        <div>{msgImages.map((url,index)=>(<img onClick={()=>window.open(url)} key={index} src={url} alt= ''/>)) }
-          {/* <img src={assets.pic1} alt="" />
-          <img src={assets.pic2} alt="" />
-          <img src={assets.pic3} alt="" />
-          <img src={assets.pic4} alt="" />
-          <img src={assets.pic5} alt="" />
-          <img src={assets.pic6} alt="" /> */}
+        <div>
+          {msgImages.map((url, index) => (
+            <img
+              onClick={() => window.open(url)}
+              key={index}
+              src={url}
+              alt=""
+            />
+          ))}
         </div>
       </div>
-      <button onClick={() => logout()}>Logout</button>
+      <button onClick={handleLogout}>Logout</button>
     </div>
-  )
-    : (
-      <div className='rs'>
-        <button onClick={() =>logout() }>Logout</button>
-      </div>
-    )
-}
+  ) : (
+    <div className="rs">
+      <button onClick={handleLogout}>Logout</button>
+    </div>
+  );
+};
 
-export default RightSidebar
+export default RightSidebar;

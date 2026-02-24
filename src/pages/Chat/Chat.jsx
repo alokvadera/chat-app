@@ -1,22 +1,13 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext } from "react";
 import "./Chat.css";
 import LeftSidebar from "../../components/LeftSidebar/LeftSidebar";
 import ChatBox from "../../components/ChatBox/ChatBox";
 import RightSidebar from "../../components/RightSidebar/RightSidebar";
-import { AppContext } from "../../context/AppContext";
+import { AppContext } from "../../context/AppContextObject";
 
 const Chat = () => {
-
   const { chatData, userData } = useContext(AppContext);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (chatData && userData) {
-      setLoading(false);
-      
-    }
-  },[chatData,userData])
-
+  const loading = !chatData || !userData;
 
   return (
     <div className="chat">

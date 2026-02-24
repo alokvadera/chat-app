@@ -1,29 +1,37 @@
 import "./Login.css";
 import assets from "../../assets/assets";
 import React, { useState } from "react";
-import { signup,login,resetPass } from "../../config/firebase";
+import { signup, login, resetPass } from "../../config/supabase";
 
 const Login = () => {
   const [currState, setCurrState] = useState("login");
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const onSubmitHandler = (event) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const onSubmitHandler = async (event) => {
     event.preventDefault();
-    if (currState === "signup") {
-      signup(userName,email,password)
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      if (currState === "signup") {
+        await signup(userName, email, password);
+      } else {
+        await login(email, password);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-    else {
-      login(email,password)
-    }
-  }
+  };
 
   return (
     <div className="login">
       <img src={assets.logo_big} alt="Logo" />
 
       <form onSubmit={onSubmitHandler} className="login-form">
-        <h2>{currState === "signup" ? "sign Up" : "login"}</h2>
+        <h2>{currState === "signup" ? "Sign Up" : "Login"}</h2>
 
         {currState === "signup" && (
           <input
@@ -37,24 +45,26 @@ const Login = () => {
         )}
 
         <input
-          onChange={(e) => setEmail(e.target.value)}
-          value={email}
-          type="email"
-          placeholder="Email"
-          className="form-input"
-          required
-        />
+            onChange={(e) => setEmail(e.target.value)}
+            value={email}
+            type="email"
+            placeholder="Email"
+            className="form-input"
+            disabled={isSubmitting}
+            required
+          />
 
         <input
-          onChange={(e) => setPassword(e.target.value)}
-          value={password}
-          type="password"
-          placeholder="Password"
-          className="form-input"
-          required
-        />
+            onChange={(e) => setPassword(e.target.value)}
+            value={password}
+            type="password"
+            placeholder="Password"
+            className="form-input"
+            disabled={isSubmitting}
+            required
+          />
 
-        <button type="submit">
+        <button type="submit" disabled={isSubmitting}>
           {currState === "signup" ? "Create Account" : "Login"}
         </button>
 
@@ -75,10 +85,12 @@ const Login = () => {
               <span onClick={() => setCurrState("signup")}> Click here</span>
             </p>
           )}
-          {currState === 'login' ? <p className="login-toggle">
+          {currState === "login" ? (
+            <p className="login-toggle">
               Forgot Password
               <span onClick={() => resetPass(email)}> reset here</span>
-            </p>: null}
+            </p>
+          ) : null}
         </div>
       </form>
     </div>
