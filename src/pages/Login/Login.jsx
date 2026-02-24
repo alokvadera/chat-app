@@ -17,7 +17,10 @@ const Login = () => {
     setIsSubmitting(true);
     try {
       if (currState === "signup") {
-        await signup(userName, email, password);
+        const result = await signup(userName, email, password);
+        if (result?.ok && result?.needsEmailVerification) {
+          setCurrState("login");
+        }
       } else {
         await login(email, password);
       }

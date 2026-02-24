@@ -10,35 +10,6 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     autoRefreshToken: true,
     detectSessionInUrl: false,
   },
-  global: {
-    fetch: (input, init = {}) => {
-      const requestUrl =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.toString()
-            : input?.url || "";
-      const method = (
-        init?.method ||
-        (typeof input !== "string" && input?.method) ||
-        "GET"
-      ).toUpperCase();
-      const isStorageUpload =
-        requestUrl.includes("/storage/v1/object") &&
-        (method === "POST" || method === "PUT");
-
-      // Uploads can legitimately take longer than standard DB/auth calls.
-      if (isStorageUpload || init.signal) {
-        return fetch(input, init);
-      }
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
-      return fetch(input, { ...init, signal: controller.signal }).finally(() =>
-        clearTimeout(timeout),
-      );
-    },
-  },
 });
 
 const normalizeUsername = (value = "") =>
@@ -119,6 +90,7 @@ export const signup = async (username, email, password) => {
 
     const user = data.user;
     if (!user) throw new Error("Signup failed - no user returned");
+    const hasSession = Boolean(data.session);
 
     try {
       await ensureUserProfile(user, {
@@ -130,9 +102,13 @@ export const signup = async (username, email, password) => {
       console.warn("Profile bootstrap deferred:", profileError.message);
     }
 
-    await supabase.auth.signOut();
-    toast.success("Account created! Please login now.");
-    return { ok: true };
+    if (hasSession) {
+      toast.success("Account created. Continue to complete your profile.");
+      return { ok: true, needsEmailVerification: false };
+    }
+
+    toast.success("Account created. Please verify email, then login.");
+    return { ok: true, needsEmailVerification: true };
   } catch (error) {
     console.error("Signup failed:", error);
     toast.error(error.message);
