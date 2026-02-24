@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import "./ChatBox.css";
 import assets from "../../assets/assets";
 import { AppContext } from "../../context/AppContextObject";
-import { supabase } from "../../config/supabase";
+import { supabase, toUserErrorMessage } from "../../config/supabase";
 import upload from "../../lib/upload";
 import { toast } from "react-toastify";
 
@@ -121,7 +121,7 @@ const ChatBox = () => {
 
       await updateChatsData("image");
     } catch (error) {
-      toast.error(error.message);
+      toast.error(toUserErrorMessage(error));
     } finally {
       e.target.value = "";
     }

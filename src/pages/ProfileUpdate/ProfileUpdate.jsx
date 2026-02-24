@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import upload from "../../lib/upload";
 import { AppContext } from "../../context/AppContextObject";
-import { supabase } from "../../config/supabase";
+import { supabase, toUserErrorMessage } from "../../config/supabase";
 
 const ProfileUpdate = () => {
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ const ProfileUpdate = () => {
       navigate("/chat");
     } catch (error) {
       console.error(error);
-      toast.error(error.message);
+      toast.error(toUserErrorMessage(error));
     }
   };
 

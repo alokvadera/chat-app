@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ensureUserProfile, supabase } from "../config/supabase";
+import { ensureUserProfile, supabase, toUserErrorMessage } from "../config/supabase";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AppContext } from "./AppContextObject";
@@ -79,7 +79,7 @@ const AppContextProvider = (props) => {
       supabase.from("users").update({ last_seen: Date.now() }).eq("id", uid);
     } catch (error) {
       console.error("loadUserData error:", error);
-      toast.error(error.message);
+      toast.error(toUserErrorMessage(error));
     }
   }, [navigate]);
 

@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import "./LeftSidebar.css";
 import assets from "../../assets/assets";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../config/supabase";
+import { supabase, toUserErrorMessage } from "../../config/supabase";
 import { AppContext } from "../../context/AppContextObject";
 import { toast } from "react-toastify";
 
@@ -54,7 +54,7 @@ const LeftSidebar = () => {
       );
       setUser(candidate || null);
     } catch (error) {
-      toast.error(error.message);
+      toast.error(toUserErrorMessage(error));
     }
   };
 
@@ -131,7 +131,7 @@ const LeftSidebar = () => {
       setShowSearch(false);
       setChatVisible(true);
     } catch (error) {
-      toast.error(error.message);
+      toast.error(toUserErrorMessage(error));
     }
   };
 
@@ -163,7 +163,7 @@ const LeftSidebar = () => {
 
       setChatVisible(true);
     } catch (error) {
-      toast.error(error.message);
+      toast.error(toUserErrorMessage(error));
     }
   };
 

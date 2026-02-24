@@ -20,6 +20,21 @@ const normalizeUsername = (value = "") =>
     .replace(/[^a-z0-9_]/g, "")
     .slice(0, 24);
 
+export const toUserErrorMessage = (error) => {
+  const message = error?.message || String(error || "Unknown error");
+  const lower = message.toLowerCase();
+
+  if (lower.includes("failed to fetch") || lower.includes("timed out")) {
+    return "Cannot reach Supabase right now. Check project URL, network/VPN/DNS, and try again.";
+  }
+
+  if (lower.includes("signal is aborted")) {
+    return "Request was interrupted before reaching Supabase. Please retry.";
+  }
+
+  return message;
+};
+
 export const ensureUserProfile = async (user, fallback = {}) => {
   if (!user?.id) throw new Error("Missing auth user");
 
@@ -111,7 +126,7 @@ export const signup = async (username, email, password) => {
     return { ok: true, needsEmailVerification: true };
   } catch (error) {
     console.error("Signup failed:", error);
-    toast.error(error.message);
+    toast.error(toUserErrorMessage(error));
     return { ok: false, error };
   }
 };
@@ -127,7 +142,7 @@ export const login = async (email, password) => {
     return { ok: true };
   } catch (error) {
     console.error("Login failed:", error);
-    toast.error(error.message);
+    toast.error(toUserErrorMessage(error));
     return { ok: false, error };
   }
 };
@@ -138,7 +153,7 @@ export const logout = async () => {
     if (error) throw error;
   } catch (error) {
     console.error(error);
-    toast.error(error.message);
+    toast.error(toUserErrorMessage(error));
   }
 };
 
@@ -163,6 +178,6 @@ export const resetPass = async (email) => {
     toast.success("Reset email sent");
   } catch (error) {
     console.error(error);
-    toast.error(error.message);
+    toast.error(toUserErrorMessage(error));
   }
 };
