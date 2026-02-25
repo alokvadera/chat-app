@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import "./ChatBox.css";
 import assets from "../../assets/assets";
 import { AppContext } from "../../context/AppContextObject";
@@ -21,6 +21,29 @@ const ChatBox = () => {
   const [now, setNow] = useState(() => Date.now());
   const currentUserAvatar = userData?.avatar || assets.avatar_icon;
   const chatUserAvatar = chatUser?.userData?.avatar || assets.avatar_icon;
+
+  const getOrCreateMessageRow = useCallback(async () => {
+    if (!messagesId) return null;
+
+    const { data, error } = await supabase
+      .from("messages")
+      .select("id,messages")
+      .eq("id", messagesId)
+      .limit(1);
+    if (error) throw error;
+
+    const row = data?.[0];
+    if (row) return row;
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("messages")
+      .insert({ id: messagesId, messages: [] })
+      .select("id,messages")
+      .limit(1);
+    if (insertError) throw insertError;
+
+    return inserted?.[0] || { id: messagesId, messages: [] };
+  }, [messagesId]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 30000);
@@ -71,13 +94,7 @@ const ChatBox = () => {
     try {
       if (!input || !messagesId) return;
 
-      const { data: msgRow } = await supabase
-        .from("messages")
-        .select("messages")
-        .eq("id", messagesId)
-        .limit(1);
-
-      const currentRow = msgRow?.[0];
+      const currentRow = await getOrCreateMessageRow();
 
       const updatedMessages = [
         ...(currentRow?.messages || []),
@@ -110,13 +127,7 @@ const ChatBox = () => {
       const fileUrl = await upload(file);
       if (!fileUrl || !messagesId) return;
 
-      const { data: msgRow } = await supabase
-        .from("messages")
-        .select("messages")
-        .eq("id", messagesId)
-        .limit(1);
-
-      const currentRow = msgRow?.[0];
+      const currentRow = await getOrCreateMessageRow();
 
       const updatedMessages = [
         ...(currentRow?.messages || []),
@@ -158,18 +169,7 @@ const ChatBox = () => {
 
     // Initial load
     const fetchMessages = async () => {
-      const { data, error } = await supabase
-        .from("messages")
-        .select("messages")
-        .eq("id", messagesId)
-        .limit(1);
-
-      if (error) {
-        console.warn("fetchMessages error:", error.message);
-        return;
-      }
-
-      const row = data?.[0];
+      const row = await getOrCreateMessageRow();
       if (row) setMessages([...(row.messages || [])].reverse());
     };
 
@@ -196,7 +196,7 @@ const ChatBox = () => {
       clearInterval(pollingId);
       supabase.removeChannel(channel);
     };
-  }, [messagesId, setMessages]);
+  }, [messagesId, setMessages, getOrCreateMessageRow]);
 
   const isOnline =
     now - (chatUser?.userData?.last_seen ? Number(chatUser.userData.last_seen) : 0) <=
