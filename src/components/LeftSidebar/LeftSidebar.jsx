@@ -23,6 +23,10 @@ const LeftSidebar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
+  const getPeerId = (item) => item?.rId ?? item?.rid ?? "";
+  const getMessageId = (item) =>
+    item?.messageId ?? item?.messagesId ?? item?.messageid ?? "";
+
   const appendChatForUser = async (targetId, entry) => {
     const { data, error } = await supabase
       .from("chats")
@@ -77,7 +81,8 @@ const LeftSidebar = () => {
       // show the first user who is not me and not already in chats
       const candidate = data.find(
         (item) =>
-          item.id !== userData.id && !chatData.some((chat) => chat.rId === item.id),
+          item.id !== userData.id &&
+          !chatData.some((chat) => getPeerId(chat) === item.id),
       );
       setUser(candidate || null);
     } catch (error) {
@@ -135,8 +140,14 @@ const LeftSidebar = () => {
   // ─── Open a chat and mark as seen ────────────────────────────────────────
   const setChat = async (item) => {
     try {
-      setMessagesId(item.messageId);
-      setChatUser(item);
+      const normalizedItem = {
+        ...item,
+        rId: getPeerId(item),
+        messageId: getMessageId(item),
+      };
+
+      setMessagesId(normalizedItem.messageId);
+      setChatUser(normalizedItem);
 
       // Mark as seen
       const { data: chatRows } = await supabase
@@ -154,7 +165,7 @@ const LeftSidebar = () => {
 
       const chatsData = [...(chatRow?.chats_data || [])];
       const chatIndex = chatsData.findIndex(
-        (c) => c.messageId === item.messageId,
+        (c) => getMessageId(c) === normalizedItem.messageId,
       );
 
       if (chatIndex !== -1) {
@@ -224,7 +235,7 @@ const LeftSidebar = () => {
               onClick={() => setChat(item)}
               key={index}
               className={`friends ${
-                item.messageSeen || item.messageId === messagesId
+                item.messageSeen || getMessageId(item) === messagesId
                   ? ""
                   : "border"
               }`}

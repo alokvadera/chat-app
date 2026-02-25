@@ -14,6 +14,15 @@ const AppContextProvider = (props) => {
   const [chatUser, setChatUser] = useState(null);
   const [chatVisible, setChatVisible] = useState(false);
 
+  const normalizeChatItem = (item) => ({
+    ...item,
+    rId: item?.rId ?? item?.rid ?? "",
+    messageId: item?.messageId ?? item?.messagesId ?? item?.messageid ?? "",
+    lastMessage: item?.lastMessage ?? "",
+    updatedAt: item?.updatedAt ?? Date.now(),
+    messageSeen: item?.messageSeen ?? true,
+  });
+
   const loadUserData = useCallback(async (uid, authUser = null) => {
     try {
       let user = authUser;
@@ -96,13 +105,16 @@ const AppContextProvider = (props) => {
       }
       const tempData = [];
       for (const item of chatsData) {
+        const normalized = normalizeChatItem(item);
+        if (!normalized.rId || !normalized.messageId) continue;
+
         const { data: users } = await supabase
           .from("users")
           .select("*")
-          .eq("id", item.rId)
+          .eq("id", normalized.rId)
           .limit(1);
         const user = users?.[0];
-        if (user) tempData.push({ ...item, userData: user });
+        if (user) tempData.push({ ...normalized, userData: user });
       }
       setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt));
     };

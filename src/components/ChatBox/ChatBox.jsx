@@ -21,14 +21,18 @@ const ChatBox = () => {
   const [now, setNow] = useState(() => Date.now());
   const currentUserAvatar = userData?.avatar || assets.avatar_icon;
   const chatUserAvatar = chatUser?.userData?.avatar || assets.avatar_icon;
+  const getMessageId = (item) =>
+    item?.messageId ?? item?.messagesId ?? item?.messageid ?? "";
+  const chatMessagesId = getMessageId(chatUser);
 
   const getOrCreateMessageRow = useCallback(async () => {
-    if (!messagesId) return null;
+    const activeMessageId = messagesId || chatMessagesId;
+    if (!activeMessageId) return null;
 
     const { data, error } = await supabase
       .from("messages")
       .select("id,messages")
-      .eq("id", messagesId)
+      .eq("id", activeMessageId)
       .limit(1);
     if (error) throw error;
 
@@ -37,13 +41,13 @@ const ChatBox = () => {
 
     const { data: inserted, error: insertError } = await supabase
       .from("messages")
-      .insert({ id: messagesId, messages: [] })
+      .insert({ id: activeMessageId, messages: [] })
       .select("id,messages")
       .limit(1);
     if (insertError) throw insertError;
 
-    return inserted?.[0] || { id: messagesId, messages: [] };
-  }, [messagesId]);
+    return inserted?.[0] || { id: activeMessageId, messages: [] };
+  }, [messagesId, chatMessagesId]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 30000);
@@ -52,9 +56,13 @@ const ChatBox = () => {
 
   // ─── Helper: update both users' chats_data ────────────────────────────────
   const updateChatsData = async (lastMessage) => {
-    const userIds = [userData.id, chatUser.rId];
+    const peerId = chatUser?.rId ?? chatUser?.rid;
+    const activeMessageId = messagesId || chatMessagesId;
+    const userIds = [userData.id, peerId];
 
     for (const id of userIds) {
+      if (!id || !activeMessageId) continue;
+
       const { data, error } = await supabase
         .from("chats")
         .select("chats_data")
@@ -71,7 +79,9 @@ const ChatBox = () => {
       }
 
       const chatsData = [...(chatRow.chats_data || [])];
-      const chatIndex = chatsData.findIndex((c) => c.messageId === messagesId);
+      const chatIndex = chatsData.findIndex(
+        (c) => getMessageId(c) === activeMessageId,
+      );
 
       if (chatIndex !== -1) {
         chatsData[chatIndex].lastMessage = lastMessage;
