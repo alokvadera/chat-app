@@ -1,16 +1,43 @@
-# React + Vite
+# Chat App (Vite + React + Supabase)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Local setup
+1. Install dependencies:
+   - `npm ci`
+2. Create `.env` with:
+   - `VITE_SUPABASE_URL=https://<project-ref>.supabase.co`
+   - `VITE_SUPABASE_ANON_KEY=<anon-key>`
+3. Run:
+   - `npm run dev`
 
-Currently, two official plugins are available:
+## Vercel deployment
+This repo includes [`vercel.json`](./vercel.json) with:
+1. Vite build config
+2. Output folder `dist`
+3. SPA rewrites for React Router
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+In Vercel project settings:
+1. Set `VITE_SUPABASE_URL`
+2. Set `VITE_SUPABASE_ANON_KEY`
+3. Redeploy with cache cleared when changing env vars
 
-## React Compiler
+## Supabase auth checklist
+In Supabase project settings:
+1. `Authentication -> URL Configuration`
+2. Set `Site URL` to your production domain
+3. Add redirect URLs:
+   - production domain
+   - vercel preview domain
+   - `http://localhost:5173`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## If login/signup times out
+If browser shows `ERR_CONNECTION_TIMED_OUT` for:
+- `https://<project-ref>.supabase.co/auth/v1/*`
 
-## Expanding the ESLint configuration
+Then this is network/endpoint reachability, not app logic.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Validate quickly:
+1. Open `https://<project-ref>.supabase.co/auth/v1/health` in browser
+2. If timeout persists:
+   - check VPN/proxy/firewall/DNS
+   - test another network (hotspot)
+   - verify project ref and URL in env vars
