@@ -4,6 +4,33 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AppContext } from "./AppContextObject";
 
+const pickFirstDefined = (item, keys) => {
+  for (const key of keys) {
+    const value = item?.[key];
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return value;
+    }
+  }
+  return "";
+};
+
+const parseTimestamp = (value) => {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : Date.now();
+};
+
+const fallbackChatUser = (id) => ({
+  id,
+  email: "",
+  username: "",
+  name: "Unknown user",
+  avatar: "",
+  bio: "",
+  last_seen: 0,
+});
+
 const AppContextProvider = (props) => {
   const navigate = useNavigate();
 
@@ -14,13 +41,24 @@ const AppContextProvider = (props) => {
   const [chatUser, setChatUser] = useState(null);
   const [chatVisible, setChatVisible] = useState(false);
 
-  const normalizeChatItem = (item) => ({
+  const normalizeChatItem = (item = {}) => ({
     ...item,
-    rId: item?.rId ?? item?.rid ?? "",
-    messageId: item?.messageId ?? item?.messagesId ?? item?.messageid ?? "",
-    lastMessage: item?.lastMessage ?? "",
-    updatedAt: item?.updatedAt ?? Date.now(),
-    messageSeen: item?.messageSeen ?? true,
+    rId: String(
+      pickFirstDefined(item, ["rId", "rid", "rID", "receiverId", "receiver_id"]),
+    ).trim(),
+    messageId: String(
+      pickFirstDefined(item, [
+        "messageId",
+        "messagesId",
+        "messageid",
+        "messagesid",
+        "message_id",
+        "messages_id",
+      ]),
+    ).trim(),
+    lastMessage: String(item?.lastMessage ?? item?.last_message ?? ""),
+    updatedAt: parseTimestamp(item?.updatedAt ?? item?.updated_at),
+    messageSeen: Boolean(item?.messageSeen ?? item?.message_seen ?? true),
   });
 
   const loadUserData = useCallback(async (uid, authUser = null) => {
@@ -94,56 +132,86 @@ const AppContextProvider = (props) => {
   }, [navigate]);
 
   useEffect(() => {
-    if (!userData) return;
+    if (!userData?.id) return;
 
     let pollingId;
+    let isActive = true;
 
-    const buildChatData = async (chatsData) => {
-      if (!chatsData || chatsData.length === 0) {
+    const buildChatData = async (rawChatsData) => {
+      const chatsData = Array.isArray(rawChatsData) ? rawChatsData : [];
+      const normalizedChats = chatsData
+        .map(normalizeChatItem)
+        .filter((item) => item.rId && item.messageId);
+
+      if (!normalizedChats.length) {
         setChatData([]);
         return;
       }
-      const tempData = [];
-      for (const item of chatsData) {
-        const normalized = normalizeChatItem(item);
-        if (!normalized.rId || !normalized.messageId) continue;
 
-        const { data: users } = await supabase
+      const peerIds = [...new Set(normalizedChats.map((item) => item.rId))];
+      const usersById = new Map();
+
+      if (peerIds.length) {
+        const { data: users, error: usersError } = await supabase
           .from("users")
           .select("*")
-          .eq("id", normalized.rId)
-          .limit(1);
-        const user = users?.[0];
-        if (user) tempData.push({ ...normalized, userData: user });
+          .in("id", peerIds);
+
+        if (usersError) {
+          console.warn("buildChatData users fetch error:", usersError.message);
+        } else {
+          for (const user of users || []) {
+            usersById.set(user.id, user);
+          }
+        }
       }
-      setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt));
+
+      if (!isActive) return;
+
+      const hydratedChats = normalizedChats
+        .map((item) => ({
+          ...item,
+          userData: usersById.get(item.rId) || fallbackChatUser(item.rId),
+        }))
+        .sort((a, b) => b.updatedAt - a.updatedAt);
+
+      setChatData(hydratedChats);
     };
 
     const fetchChats = async () => {
-      const { data, error } = await supabase
-        .from("chats")
-        .select("chats_data")
-        .eq("id", userData.id)
-        .limit(1);
+      try {
+        const { data, error } = await supabase
+          .from("chats")
+          .select("chats_data")
+          .eq("id", userData.id)
+          .limit(1);
 
-      if (error) {
-        console.warn("fetchChats error:", error.message);
-        return;
+        if (error) {
+          console.warn("fetchChats error:", error.message);
+          return;
+        }
+
+        const chatRow = data?.[0];
+
+        // self-heal if row was deleted
+        if (!chatRow) {
+          const { error: upsertError } = await supabase
+            .from("chats")
+            .upsert({ id: userData.id, chats_data: [] });
+          if (upsertError) {
+            console.warn("fetchChats upsert error:", upsertError.message);
+          }
+          if (isActive) setChatData([]);
+          return;
+        }
+
+        await buildChatData(chatRow.chats_data);
+      } catch (error) {
+        console.warn("fetchChats unexpected error:", error?.message || error);
       }
-
-      const chatRow = data?.[0];
-
-      // self-heal if row was deleted
-      if (!chatRow) {
-        await supabase.from("chats").upsert({ id: userData.id, chats_data: [] });
-        setChatData([]);
-        return;
-      }
-
-      await buildChatData(chatRow.chats_data);
     };
 
-    fetchChats();
+    void fetchChats();
     pollingId = setInterval(fetchChats, 5000);
 
     const channel = supabase
@@ -151,18 +219,19 @@ const AppContextProvider = (props) => {
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "chats",
           filter: `id=eq.${userData.id}`,
         },
         async (payload) => {
-          await buildChatData(payload.new.chats_data);
+          await buildChatData(payload?.new?.chats_data);
         },
       )
       .subscribe();
 
     return () => {
+      isActive = false;
       clearInterval(pollingId);
       supabase.removeChannel(channel);
     };

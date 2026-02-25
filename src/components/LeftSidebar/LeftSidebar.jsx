@@ -23,9 +23,21 @@ const LeftSidebar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
-  const getPeerId = (item) => item?.rId ?? item?.rid ?? "";
+  const getPeerId = (item) =>
+    String(
+      item?.rId ?? item?.rid ?? item?.rID ?? item?.receiverId ?? item?.receiver_id ?? "",
+    ).trim();
   const getMessageId = (item) =>
-    item?.messageId ?? item?.messagesId ?? item?.messageid ?? "";
+    String(
+      item?.messageId ??
+        item?.messagesId ??
+        item?.messageid ??
+        item?.messagesid ??
+        item?.message_id ??
+        item?.messages_id ??
+        "",
+    ).trim();
+  const activeMessageId = getMessageId(chatUser);
 
   const appendChatForUser = async (targetId, entry) => {
     const { data, error } = await supabase
@@ -37,19 +49,32 @@ const LeftSidebar = () => {
     if (error) throw error;
 
     const row = data?.[0];
-    const nextChats = [...(row?.chats_data || []), entry];
+    const currentChats = Array.isArray(row?.chats_data) ? [...row.chats_data] : [];
+    const existingIndex = currentChats.findIndex(
+      (chat) =>
+        getMessageId(chat) === entry.messageId || getPeerId(chat) === entry.rId,
+    );
+
+    if (existingIndex === -1) {
+      currentChats.push(entry);
+    } else {
+      currentChats[existingIndex] = {
+        ...currentChats[existingIndex],
+        ...entry,
+      };
+    }
 
     if (!row) {
       const { error: insertError } = await supabase
         .from("chats")
-        .insert({ id: targetId, chats_data: nextChats });
+        .insert({ id: targetId, chats_data: currentChats });
       if (insertError) throw insertError;
       return;
     }
 
     const { error: updateError } = await supabase
       .from("chats")
-      .update({ chats_data: nextChats })
+      .update({ chats_data: currentChats })
       .eq("id", targetId);
     if (updateError) throw updateError;
   };
@@ -93,6 +118,15 @@ const LeftSidebar = () => {
   // ─── Add new chat ─────────────────────────────────────────────────────────
   const addChat = async () => {
     try {
+      if (!user?.id || !userData?.id) return;
+
+      const existingChat = chatData.find((chat) => getPeerId(chat) === user.id);
+      if (existingChat) {
+        await setChat(existingChat);
+        setShowSearch(false);
+        return;
+      }
+
       // Create new messages row
       const { data: newMsg, error: msgError } = await supabase
         .from("messages")
@@ -146,6 +180,11 @@ const LeftSidebar = () => {
         messageId: getMessageId(item),
       };
 
+      if (!normalizedItem.rId || !normalizedItem.messageId) {
+        toast.error("Corrupt chat record. Missing chat/message id.");
+        return;
+      }
+
       setMessagesId(normalizedItem.messageId);
       setChatUser(normalizedItem);
 
@@ -182,21 +221,41 @@ const LeftSidebar = () => {
     }
   };
 
-  // ─── Keep chatUser data fresh when chatData updates ───────────────────────
+  // Keep selected chat metadata in sync when sidebar data refreshes.
   useEffect(() => {
-    const updateChatUserData = async () => {
-      if (chatUser) {
-        const { data } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", chatUser.userData.id)
-          .limit(1);
+    if (!activeMessageId) return;
 
-        if (data?.[0]) setChatUser((prev) => ({ ...prev, userData: data[0] }));
-      }
-    };
-    updateChatUserData();
-  }, [chatData, chatUser, setChatUser]);
+    const latestChat = chatData.find(
+      (item) => getMessageId(item) === activeMessageId,
+    );
+    if (!latestChat?.userData) return;
+
+    setChatUser((prev) => {
+      if (!prev) return prev;
+      const prevUser = prev.userData || {};
+      const nextUser = latestChat.userData || {};
+
+      const unchanged =
+        prevUser.id === nextUser.id &&
+        prevUser.name === nextUser.name &&
+        prevUser.avatar === nextUser.avatar &&
+        prevUser.bio === nextUser.bio &&
+        Number(prevUser.last_seen || 0) === Number(nextUser.last_seen || 0) &&
+        getPeerId(prev) === getPeerId(latestChat);
+
+      if (unchanged) return prev;
+
+      return {
+        ...prev,
+        rId: getPeerId(latestChat),
+        messageId: getMessageId(latestChat),
+        userData: nextUser,
+        lastMessage: latestChat.lastMessage,
+        updatedAt: latestChat.updatedAt,
+        messageSeen: latestChat.messageSeen,
+      };
+    });
+  }, [activeMessageId, chatData, setChatUser]);
 
   return (
     <div className={`ls ${chatVisible ? "hidden" : ""}`}>
@@ -233,7 +292,7 @@ const LeftSidebar = () => {
           chatData.map((item, index) => (
             <div
               onClick={() => setChat(item)}
-              key={index}
+              key={getMessageId(item) || `${getPeerId(item)}_${index}`}
               className={`friends ${
                 item.messageSeen || getMessageId(item) === messagesId
                   ? ""
