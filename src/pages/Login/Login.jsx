@@ -1,9 +1,11 @@
 import "./Login.css";
 import assets from "../../assets/assets";
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { signup, login, resetPass } from "../../config/supabase";
+import { AppContext } from "../../context/AppContextObject";
 
 const Login = () => {
+  const { loadUserData } = useContext(AppContext);
   const [currState, setCurrState] = useState("login");
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
@@ -18,11 +20,21 @@ const Login = () => {
     try {
       if (currState === "signup") {
         const result = await signup(userName, email, password);
+        if (result?.ok && !result?.needsEmailVerification && result?.user?.id) {
+          await loadUserData(result.user.id, result.user);
+          return;
+        }
+        if (result?.rateLimited) {
+          setCurrState("login");
+        }
         if (result?.ok && result?.needsEmailVerification) {
           setCurrState("login");
         }
       } else {
-        await login(email, password);
+        const result = await login(email, password);
+        if (result?.ok && result?.user?.id) {
+          await loadUserData(result.user.id, result.user);
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -68,7 +80,11 @@ const Login = () => {
           />
 
         <button type="submit" disabled={isSubmitting}>
-          {currState === "signup" ? "Create Account" : "Login"}
+          {isSubmitting
+            ? "Please wait..."
+            : currState === "signup"
+              ? "Create Account"
+              : "Login"}
         </button>
 
         <div className="login-term">

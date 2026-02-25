@@ -3,6 +3,13 @@ import { toast } from "react-toastify";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseHost = (() => {
+  try {
+    return new URL(supabaseUrl).host;
+  } catch {
+    return supabaseUrl || "unknown-host";
+  }
+})();
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
@@ -20,12 +27,45 @@ const normalizeUsername = (value = "") =>
     .replace(/[^a-z0-9_]/g, "")
     .slice(0, 24);
 
+const AUTH_TIMEOUT_MS = 15000;
+
+const withTimeout = async (
+  promise,
+  timeoutMs = AUTH_TIMEOUT_MS,
+  timeoutMessage = "Request timed out. Please try again.",
+) => {
+  let timeoutId;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+const isRateLimitError = (error) => {
+  const message = (error?.message || "").toLowerCase();
+  return (
+    message.includes("rate limit") ||
+    message.includes("too many requests") ||
+    message.includes("security purposes")
+  );
+};
+
 export const toUserErrorMessage = (error) => {
   const message = error?.message || String(error || "Unknown error");
   const lower = message.toLowerCase();
 
+  if (isRateLimitError(error)) {
+    return "Email rate limit reached. Wait a minute, then try again or login if account is already created.";
+  }
+
   if (lower.includes("failed to fetch") || lower.includes("timed out")) {
-    return "Cannot reach Supabase right now. Check project URL, network/VPN/DNS, and try again.";
+    return `Cannot reach Supabase (${supabaseHost}). Check Render env, project URL, and network/VPN/DNS.`;
   }
 
   if (lower.includes("signal is aborted")) {
@@ -91,16 +131,20 @@ export const signup = async (username, email, password) => {
       return { ok: false };
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username: normalizedUsername,
-          full_name: username.trim(),
+    const { data, error } = await withTimeout(
+      supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: normalizedUsername,
+            full_name: username.trim(),
+          },
         },
-      },
-    });
+      }),
+      AUTH_TIMEOUT_MS,
+      "Signup request timed out. Please check network and try again.",
+    );
     if (error) throw error;
 
     const user = data.user;
@@ -119,27 +163,31 @@ export const signup = async (username, email, password) => {
 
     if (hasSession) {
       toast.success("Account created. Continue to complete your profile.");
-      return { ok: true, needsEmailVerification: false };
+      return { ok: true, needsEmailVerification: false, user };
     }
 
     toast.success("Account created. Please verify email, then login.");
-    return { ok: true, needsEmailVerification: true };
+    return { ok: true, needsEmailVerification: true, user };
   } catch (error) {
     console.error("Signup failed:", error);
     toast.error(toUserErrorMessage(error));
-    return { ok: false, error };
+    return { ok: false, error, rateLimited: isRateLimitError(error) };
   }
 };
 
 export const login = async (email, password) => {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error } = await withTimeout(
+      supabase.auth.signInWithPassword({
+        email,
+        password,
+      }),
+      AUTH_TIMEOUT_MS,
+      "Login request timed out. Please check network and try again.",
+    );
     if (error) throw error;
     if (!data.user) throw new Error("Login failed");
-    return { ok: true };
+    return { ok: true, user: data.user, session: data.session };
   } catch (error) {
     console.error("Login failed:", error);
     toast.error(toUserErrorMessage(error));
