@@ -3,13 +3,6 @@ import { toast } from "react-toastify";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabaseHost = (() => {
-  try {
-    return new URL(supabaseUrl).host;
-  } catch {
-    return supabaseUrl || "unknown-host";
-  }
-})();
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
@@ -56,6 +49,14 @@ const isRateLimitError = (error) => {
   );
 };
 
+const isDev = import.meta.env.DEV;
+const logDevError = (...args) => {
+  if (isDev) console.error(...args);
+};
+const logDevWarn = (...args) => {
+  if (isDev) console.warn(...args);
+};
+
 export const toUserErrorMessage = (error) => {
   const message = error?.message || String(error || "Unknown error");
   const lower = message.toLowerCase();
@@ -64,8 +65,20 @@ export const toUserErrorMessage = (error) => {
     return "Email rate limit reached. Wait a minute, then try again or login if account is already created.";
   }
 
+  if (lower.includes("invalid login credentials")) {
+    return "Invalid email or password.";
+  }
+
+  if (lower.includes("email not confirmed")) {
+    return "Please verify your email, then login.";
+  }
+
+  if (lower.includes("user already registered")) {
+    return "Account already exists. Please login.";
+  }
+
   if (lower.includes("failed to fetch") || lower.includes("timed out")) {
-    return `Cannot reach Supabase (${supabaseHost}). Check Render env, project URL, and network/VPN/DNS.`;
+    return "Cannot reach server right now. Check your network and try again.";
   }
 
   if (lower.includes("signal is aborted")) {
@@ -77,10 +90,14 @@ export const toUserErrorMessage = (error) => {
     lower.includes("violates row-level security policy") ||
     lower.includes("permission denied")
   ) {
-    return "Supabase RLS blocked this action. Update chats/messages policies for cross-user chat updates.";
+    return "You are not allowed to perform this action.";
   }
 
-  return message;
+  if (lower.includes("jwt") || lower.includes("unauthorized")) {
+    return "Session expired. Please login again.";
+  }
+
+  return "Something went wrong. Please try again.";
 };
 
 export const ensureUserProfile = async (user, fallback = {}) => {
@@ -166,7 +183,7 @@ export const signup = async (username, email, password) => {
       });
     } catch (profileError) {
       // If email confirmation is enabled, the user may not have an active session yet.
-      console.warn("Profile bootstrap deferred:", profileError.message);
+      logDevWarn("Profile bootstrap deferred:", profileError.message);
     }
 
     if (hasSession) {
@@ -177,7 +194,7 @@ export const signup = async (username, email, password) => {
     toast.success("Account created. Please verify email, then login.");
     return { ok: true, needsEmailVerification: true, user };
   } catch (error) {
-    console.error("Signup failed:", error);
+    logDevError("Signup failed:", error);
     toast.error(toUserErrorMessage(error));
     return { ok: false, error, rateLimited: isRateLimitError(error) };
   }
@@ -197,7 +214,7 @@ export const login = async (email, password) => {
     if (!data.user) throw new Error("Login failed");
     return { ok: true, user: data.user, session: data.session };
   } catch (error) {
-    console.error("Login failed:", error);
+    logDevError("Login failed:", error);
     toast.error(toUserErrorMessage(error));
     return { ok: false, error };
   }
@@ -208,7 +225,7 @@ export const logout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   } catch (error) {
-    console.error(error);
+    logDevError(error);
     toast.error(toUserErrorMessage(error));
   }
 };
@@ -226,7 +243,7 @@ export const resetPass = async (email) => {
     if (error) throw error;
     toast.success("Password reset email sent. Check your inbox.");
   } catch (error) {
-    console.error(error);
+    logDevError(error);
     toast.error(toUserErrorMessage(error));
   }
 };

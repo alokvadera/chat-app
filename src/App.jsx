@@ -11,7 +11,7 @@ import { AppContext } from "./context/AppContextObject";
 
 const App = () => {
   const navigate = useNavigate();
-  const { loadUserData } = useContext(AppContext);
+  const { loadUserData, clearAppState } = useContext(AppContext);
   const isLoadingUserRef = useRef(false);
   const lastLoadedUidRef = useRef("");
   const lastLoadedAtRef = useRef(0);
@@ -75,13 +75,14 @@ const App = () => {
           void safeLoadUserData(session.user.id, session.user);
         }, 0);
       } else if (event === "SIGNED_OUT") {
+        clearAppState();
         lastLoadedUidRef.current = "";
         lastLoadedAtRef.current = 0;
         navigate("/");
       }
     });
     return () => subscription.unsubscribe();
-  }, [safeLoadUserData, navigate]);
+  }, [safeLoadUserData, navigate, clearAppState]);
 
   return (
     <>

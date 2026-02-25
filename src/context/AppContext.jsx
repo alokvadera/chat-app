@@ -4,6 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AppContext } from "./AppContextObject";
 
+const isDev = import.meta.env.DEV;
+const logWarn = (...args) => {
+  if (isDev) console.warn(...args);
+};
+const logError = (...args) => {
+  if (isDev) console.error(...args);
+};
+
 const pickFirstDefined = (item, keys) => {
   for (const key of keys) {
     const value = item?.[key];
@@ -31,6 +39,24 @@ const fallbackChatUser = (id) => ({
   last_seen: 0,
 });
 
+const isAuthOrRlsError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  const details = String(error?.details || "").toLowerCase();
+  const code = String(error?.code || "");
+  const status = Number(error?.status || 0);
+
+  return (
+    status === 401 ||
+    status === 403 ||
+    code === "42501" ||
+    message.includes("unauthorized") ||
+    message.includes("jwt") ||
+    message.includes("row-level security") ||
+    message.includes("permission denied") ||
+    details.includes("row-level security")
+  );
+};
+
 const AppContextProvider = (props) => {
   const navigate = useNavigate();
 
@@ -40,6 +66,15 @@ const AppContextProvider = (props) => {
   const [messages, setMessages] = useState([]);
   const [chatUser, setChatUser] = useState(null);
   const [chatVisible, setChatVisible] = useState(false);
+
+  const clearAppState = useCallback(() => {
+    setUserData(null);
+    setChatData([]);
+    setMessagesId(null);
+    setMessages([]);
+    setChatUser(null);
+    setChatVisible(false);
+  }, []);
 
   const normalizeChatItem = (item = {}) => ({
     ...item,
@@ -80,7 +115,7 @@ const AppContextProvider = (props) => {
       let data = userRows?.[0];
 
       if (error) {
-        console.warn("Initial profile read failed:", error.message);
+        logWarn("Initial profile read failed:", error.message);
       }
 
       if (!data) {
@@ -94,7 +129,7 @@ const AppContextProvider = (props) => {
           data = refetch.data?.[0];
           error = refetch.error;
         } catch (bootstrapError) {
-          console.warn("Profile bootstrap failed:", bootstrapError.message);
+          logWarn("Profile bootstrap failed:", bootstrapError.message);
         }
       }
 
@@ -112,7 +147,7 @@ const AppContextProvider = (props) => {
       }
 
       if (error) {
-        console.warn("Profile read error after bootstrap:", error.message);
+        logWarn("Profile read error after bootstrap:", error.message);
       }
 
       setUserData(data);
@@ -126,7 +161,7 @@ const AppContextProvider = (props) => {
       // Update lastSeen in background
       supabase.from("users").update({ last_seen: Date.now() }).eq("id", uid);
     } catch (error) {
-      console.error("loadUserData error:", error);
+      logError("loadUserData error:", error);
       toast.error(toUserErrorMessage(error));
     }
   }, [navigate]);
@@ -158,7 +193,7 @@ const AppContextProvider = (props) => {
           .in("id", peerIds);
 
         if (usersError) {
-          console.warn("buildChatData users fetch error:", usersError.message);
+          logWarn("buildChatData users fetch error:", usersError.message);
         } else {
           for (const user of users || []) {
             usersById.set(user.id, user);
@@ -187,27 +222,25 @@ const AppContextProvider = (props) => {
           .limit(1);
 
         if (error) {
-          console.warn("fetchChats error:", error.message);
+          if (isAuthOrRlsError(error)) {
+            if (isActive) setChatData([]);
+            return;
+          }
+          logWarn("fetchChats error:", error.message);
           return;
         }
 
         const chatRow = data?.[0];
 
-        // self-heal if row was deleted
+        // No auto-upsert here: with RLS, hidden rows can look like "not found".
         if (!chatRow) {
-          const { error: upsertError } = await supabase
-            .from("chats")
-            .upsert({ id: userData.id, chats_data: [] });
-          if (upsertError) {
-            console.warn("fetchChats upsert error:", upsertError.message);
-          }
           if (isActive) setChatData([]);
           return;
         }
 
         await buildChatData(chatRow.chats_data);
       } catch (error) {
-        console.warn("fetchChats unexpected error:", error?.message || error);
+        logWarn("fetchChats unexpected error:", error?.message || error);
       }
     };
 
@@ -251,6 +284,7 @@ const AppContextProvider = (props) => {
     setChatUser,
     chatVisible,
     setChatVisible,
+    clearAppState,
   };
 
   return (
