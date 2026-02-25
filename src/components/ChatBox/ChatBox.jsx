@@ -38,18 +38,13 @@ const ChatBox = () => {
         .eq("id", id)
         .limit(1);
 
-      if (error) {
-        console.warn(`updateChatsData read failed for ${id}:`, error.message);
-        continue;
-      }
+      if (error) throw error;
 
       const chatRow = data?.[0];
       if (!chatRow) {
-        // Recreate missing self row and skip remote rows blocked by RLS.
-        if (id === userData.id) {
-          await supabase.from("chats").upsert({ id, chats_data: [] });
-        }
-        continue;
+        throw new Error(
+          `Missing chats row for user ${id}. Ensure chats rows exist and RLS allows updates.`,
+        );
       }
 
       const chatsData = [...(chatRow.chats_data || [])];
@@ -62,10 +57,11 @@ const ChatBox = () => {
           chatsData[chatIndex].messageSeen = false;
         }
 
-        await supabase
+        const { error: updateError } = await supabase
           .from("chats")
           .update({ chats_data: chatsData })
           .eq("id", id);
+        if (updateError) throw updateError;
       }
     }
   };
@@ -92,14 +88,15 @@ const ChatBox = () => {
         },
       ];
 
-      await supabase
+      const { error: updateError } = await supabase
         .from("messages")
         .update({ messages: updatedMessages })
         .eq("id", messagesId);
+      if (updateError) throw updateError;
 
       await updateChatsData(input.slice(0, 30));
     } catch (error) {
-      console.error(error.message);
+      toast.error(toUserErrorMessage(error));
     }
     setInput("");
   };
@@ -130,10 +127,11 @@ const ChatBox = () => {
         },
       ];
 
-      await supabase
+      const { error: updateError } = await supabase
         .from("messages")
         .update({ messages: updatedMessages })
         .eq("id", messagesId);
+      if (updateError) throw updateError;
 
       await updateChatsData("image");
     } catch (error) {

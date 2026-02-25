@@ -23,17 +23,14 @@ const LeftSidebar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
-  const appendChatForUser = async (targetId, entry, allowFailure = false) => {
+  const appendChatForUser = async (targetId, entry) => {
     const { data, error } = await supabase
       .from("chats")
       .select("chats_data")
       .eq("id", targetId)
       .limit(1);
 
-    if (error) {
-      if (allowFailure) return;
-      throw error;
-    }
+    if (error) throw error;
 
     const row = data?.[0];
     const nextChats = [...(row?.chats_data || []), entry];
@@ -42,7 +39,7 @@ const LeftSidebar = () => {
       const { error: insertError } = await supabase
         .from("chats")
         .insert({ id: targetId, chats_data: nextChats });
-      if (insertError && !allowFailure) throw insertError;
+      if (insertError) throw insertError;
       return;
     }
 
@@ -50,7 +47,7 @@ const LeftSidebar = () => {
       .from("chats")
       .update({ chats_data: nextChats })
       .eq("id", targetId);
-    if (updateError && !allowFailure) throw updateError;
+    if (updateError) throw updateError;
   };
 
   // ─── Search user by username ──────────────────────────────────────────────
@@ -102,7 +99,7 @@ const LeftSidebar = () => {
 
       const newMessageId = newMsg.id;
 
-      // Update current user first (required), then remote user (best effort with strict RLS)
+      // Both rows must be updated; if remote update fails, chat won't appear to recipient.
       await appendChatForUser(userData.id, {
         messageId: newMessageId,
         lastMessage: "",
@@ -110,17 +107,13 @@ const LeftSidebar = () => {
         updatedAt: Date.now(),
         messageSeen: true,
       });
-      await appendChatForUser(
-        user.id,
-        {
-          messageId: newMessageId,
-          lastMessage: "",
-          rId: userData.id,
-          updatedAt: Date.now(),
-          messageSeen: true,
-        },
-        true,
-      );
+      await appendChatForUser(user.id, {
+        messageId: newMessageId,
+        lastMessage: "",
+        rId: userData.id,
+        updatedAt: Date.now(),
+        messageSeen: true,
+      });
 
       // Open this new chat immediately
       setChat({

@@ -72,6 +72,14 @@ export const toUserErrorMessage = (error) => {
     return "Request was interrupted before reaching Supabase. Please retry.";
   }
 
+  if (
+    lower.includes("row-level security") ||
+    lower.includes("violates row-level security policy") ||
+    lower.includes("permission denied")
+  ) {
+    return "Supabase RLS blocked this action. Update chats/messages policies for cross-user chat updates.";
+  }
+
   return message;
 };
 
