@@ -41,6 +41,23 @@ const App = () => {
   );
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const hash = window.location.hash.replace(/^#/, "");
+    if (!hash) return;
+
+    const params = new URLSearchParams(hash);
+    const type = params.get("type");
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    const isRecoveryLink = type === "recovery" && accessToken && refreshToken;
+    if (!isRecoveryLink || window.location.pathname === "/reset-password") return;
+
+    navigate(`/reset-password${window.location.hash}`, { replace: true });
+  }, [navigate]);
+
+  useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
