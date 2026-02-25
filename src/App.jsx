@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./pages/Login/Login";
 import Chat from "./pages/Chat/Chat";
 import ProfileUpdate from "./pages/ProfileUpdate/ProfileUpdate";
+import ResetPassword from "./pages/ResetPassword/ResetPassword";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { supabase } from "./config/supabase";
@@ -43,7 +44,16 @@ const App = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        navigate("/reset-password");
+        return;
+      }
+
+      const isResetFlowRoute =
+        typeof window !== "undefined" && window.location.pathname === "/reset-password";
+
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+        if (isResetFlowRoute) return;
         setTimeout(() => {
           void safeLoadUserData(session.user.id, session.user);
         }, 0);
@@ -63,6 +73,7 @@ const App = () => {
         <Route path="/" element={<Login />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/profile-update" element={<ProfileUpdate />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
     </>
   );

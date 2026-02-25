@@ -214,24 +214,22 @@ export const logout = async () => {
 };
 
 export const resetPass = async (email) => {
-  if (!email) {
+  const cleanEmail = email?.trim().toLowerCase();
+  if (!cleanEmail) {
     toast.error("Enter your email first");
     return;
   }
   try {
-    const { data } = await supabase
-      .from("users")
-      .select("email")
-      .eq("email", email)
-      .maybeSingle();
+    const redirectTo =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/reset-password`
+        : undefined;
 
-    if (!data) {
-      toast.error("Email does not exist");
-      return;
-    }
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo,
+    });
     if (error) throw error;
-    toast.success("Reset email sent");
+    toast.success("Password reset email sent. Check your inbox.");
   } catch (error) {
     console.error(error);
     toast.error(toUserErrorMessage(error));
