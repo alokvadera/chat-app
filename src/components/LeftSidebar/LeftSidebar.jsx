@@ -23,6 +23,36 @@ const LeftSidebar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
+  const appendChatForUser = async (targetId, entry, allowFailure = false) => {
+    const { data, error } = await supabase
+      .from("chats")
+      .select("chats_data")
+      .eq("id", targetId)
+      .limit(1);
+
+    if (error) {
+      if (allowFailure) return;
+      throw error;
+    }
+
+    const row = data?.[0];
+    const nextChats = [...(row?.chats_data || []), entry];
+
+    if (!row) {
+      const { error: insertError } = await supabase
+        .from("chats")
+        .insert({ id: targetId, chats_data: nextChats });
+      if (insertError && !allowFailure) throw insertError;
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from("chats")
+      .update({ chats_data: nextChats })
+      .eq("id", targetId);
+    if (updateError && !allowFailure) throw updateError;
+  };
+
   // ─── Search user by username ──────────────────────────────────────────────
   const inputHandler = async (e) => {
     try {
@@ -72,51 +102,25 @@ const LeftSidebar = () => {
 
       const newMessageId = newMsg.id;
 
-      // Update the found user's chats_data
-      const { data: theirChat } = await supabase
-        .from("chats")
-        .select("chats_data")
-        .eq("id", user.id)
-        .single();
-
-      await supabase
-        .from("chats")
-        .update({
-          chats_data: [
-            ...(theirChat?.chats_data || []),
-            {
-              messageId: newMessageId,
-              lastMessage: "",
-              rId: userData.id,
-              updatedAt: Date.now(),
-              messageSeen: true,
-            },
-          ],
-        })
-        .eq("id", user.id);
-
-      // Update current user's chats_data
-      const { data: myChat } = await supabase
-        .from("chats")
-        .select("chats_data")
-        .eq("id", userData.id)
-        .single();
-
-      await supabase
-        .from("chats")
-        .update({
-          chats_data: [
-            ...(myChat?.chats_data || []),
-            {
-              messageId: newMessageId,
-              lastMessage: "",
-              rId: user.id,
-              updatedAt: Date.now(),
-              messageSeen: true,
-            },
-          ],
-        })
-        .eq("id", userData.id);
+      // Update current user first (required), then remote user (best effort with strict RLS)
+      await appendChatForUser(userData.id, {
+        messageId: newMessageId,
+        lastMessage: "",
+        rId: user.id,
+        updatedAt: Date.now(),
+        messageSeen: true,
+      });
+      await appendChatForUser(
+        user.id,
+        {
+          messageId: newMessageId,
+          lastMessage: "",
+          rId: userData.id,
+          updatedAt: Date.now(),
+          messageSeen: true,
+        },
+        true,
+      );
 
       // Open this new chat immediately
       setChat({
@@ -142,11 +146,18 @@ const LeftSidebar = () => {
       setChatUser(item);
 
       // Mark as seen
-      const { data: chatRow } = await supabase
+      const { data: chatRows } = await supabase
         .from("chats")
         .select("chats_data")
         .eq("id", userData.id)
-        .single();
+        .limit(1);
+
+      const chatRow = chatRows?.[0];
+      if (!chatRow) {
+        await supabase.from("chats").upsert({ id: userData.id, chats_data: [] });
+        setChatVisible(true);
+        return;
+      }
 
       const chatsData = [...(chatRow?.chats_data || [])];
       const chatIndex = chatsData.findIndex(
@@ -175,9 +186,9 @@ const LeftSidebar = () => {
           .from("users")
           .select("*")
           .eq("id", chatUser.userData.id)
-          .single();
+          .limit(1);
 
-        if (data) setChatUser((prev) => ({ ...prev, userData: data }));
+        if (data?.[0]) setChatUser((prev) => ({ ...prev, userData: data[0] }));
       }
     };
     updateChatUserData();

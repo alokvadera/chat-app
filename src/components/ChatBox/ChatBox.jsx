@@ -29,18 +29,30 @@ const ChatBox = () => {
 
   // ─── Helper: update both users' chats_data ────────────────────────────────
   const updateChatsData = async (lastMessage) => {
-    const userIds = [chatUser.rId, userData.id];
+    const userIds = [userData.id, chatUser.rId];
 
     for (const id of userIds) {
-      const { data: chatRow } = await supabase
+      const { data, error } = await supabase
         .from("chats")
         .select("chats_data")
         .eq("id", id)
-        .single();
+        .limit(1);
 
-      if (!chatRow) continue;
+      if (error) {
+        console.warn(`updateChatsData read failed for ${id}:`, error.message);
+        continue;
+      }
 
-      const chatsData = [...chatRow.chats_data];
+      const chatRow = data?.[0];
+      if (!chatRow) {
+        // Recreate missing self row and skip remote rows blocked by RLS.
+        if (id === userData.id) {
+          await supabase.from("chats").upsert({ id, chats_data: [] });
+        }
+        continue;
+      }
+
+      const chatsData = [...(chatRow.chats_data || [])];
       const chatIndex = chatsData.findIndex((c) => c.messageId === messagesId);
 
       if (chatIndex !== -1) {
@@ -67,10 +79,12 @@ const ChatBox = () => {
         .from("messages")
         .select("messages")
         .eq("id", messagesId)
-        .single();
+        .limit(1);
+
+      const currentRow = msgRow?.[0];
 
       const updatedMessages = [
-        ...(msgRow?.messages || []),
+        ...(currentRow?.messages || []),
         {
           sId: userData.id,
           text: input,
@@ -103,10 +117,12 @@ const ChatBox = () => {
         .from("messages")
         .select("messages")
         .eq("id", messagesId)
-        .single();
+        .limit(1);
+
+      const currentRow = msgRow?.[0];
 
       const updatedMessages = [
-        ...(msgRow?.messages || []),
+        ...(currentRow?.messages || []),
         {
           sId: userData.id,
           image: fileUrl,
@@ -140,19 +156,27 @@ const ChatBox = () => {
   // ─── Realtime messages subscription ──────────────────────────────────────
   useEffect(() => {
     if (!messagesId) return;
+    let pollingId;
 
     // Initial load
     const fetchMessages = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("messages")
         .select("messages")
         .eq("id", messagesId)
-        .single();
+        .limit(1);
 
-      if (data) setMessages([...(data.messages || [])].reverse());
+      if (error) {
+        console.warn("fetchMessages error:", error.message);
+        return;
+      }
+
+      const row = data?.[0];
+      if (row) setMessages([...(row.messages || [])].reverse());
     };
 
     fetchMessages();
+    pollingId = setInterval(fetchMessages, 3000);
 
     const channel = supabase
       .channel(`messages_${messagesId}`)
@@ -171,6 +195,7 @@ const ChatBox = () => {
       .subscribe();
 
     return () => {
+      clearInterval(pollingId);
       supabase.removeChannel(channel);
     };
   }, [messagesId, setMessages]);

@@ -25,11 +25,12 @@ const AppContextProvider = (props) => {
       }
       if (!user) throw new Error("Auth session missing");
 
-      let { data, error } = await supabase
+      let { data: userRows, error } = await supabase
         .from("users")
         .select("*")
         .eq("id", uid)
-        .maybeSingle();
+        .limit(1);
+      let data = userRows?.[0];
 
       if (error) {
         console.warn("Initial profile read failed:", error.message);
@@ -42,8 +43,8 @@ const AppContextProvider = (props) => {
             .from("users")
             .select("*")
             .eq("id", uid)
-            .maybeSingle();
-          data = refetch.data;
+            .limit(1);
+          data = refetch.data?.[0];
           error = refetch.error;
         } catch (bootstrapError) {
           console.warn("Profile bootstrap failed:", bootstrapError.message);
@@ -86,6 +87,8 @@ const AppContextProvider = (props) => {
   useEffect(() => {
     if (!userData) return;
 
+    let pollingId;
+
     const buildChatData = async (chatsData) => {
       if (!chatsData || chatsData.length === 0) {
         setChatData([]);
@@ -93,26 +96,43 @@ const AppContextProvider = (props) => {
       }
       const tempData = [];
       for (const item of chatsData) {
-        const { data: user } = await supabase
+        const { data: users } = await supabase
           .from("users")
           .select("*")
           .eq("id", item.rId)
-          .maybeSingle();
+          .limit(1);
+        const user = users?.[0];
         if (user) tempData.push({ ...item, userData: user });
       }
       setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt));
     };
 
     const fetchChats = async () => {
-      const { data: chatRow } = await supabase
+      const { data, error } = await supabase
         .from("chats")
         .select("chats_data")
         .eq("id", userData.id)
-        .maybeSingle();
-      if (chatRow) await buildChatData(chatRow.chats_data);
+        .limit(1);
+
+      if (error) {
+        console.warn("fetchChats error:", error.message);
+        return;
+      }
+
+      const chatRow = data?.[0];
+
+      // self-heal if row was deleted
+      if (!chatRow) {
+        await supabase.from("chats").upsert({ id: userData.id, chats_data: [] });
+        setChatData([]);
+        return;
+      }
+
+      await buildChatData(chatRow.chats_data);
     };
 
     fetchChats();
+    pollingId = setInterval(fetchChats, 5000);
 
     const channel = supabase
       .channel(`chats_${userData.id}`)
@@ -130,7 +150,10 @@ const AppContextProvider = (props) => {
       )
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      clearInterval(pollingId);
+      supabase.removeChannel(channel);
+    };
   }, [userData]);
 
   const value = {
