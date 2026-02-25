@@ -24,9 +24,9 @@ const ChatBox = () => {
   const getMessageId = (item) =>
     item?.messageId ?? item?.messagesId ?? item?.messageid ?? "";
   const chatMessagesId = getMessageId(chatUser);
+  const activeMessageId = messagesId || chatMessagesId;
 
   const getOrCreateMessageRow = useCallback(async () => {
-    const activeMessageId = messagesId || chatMessagesId;
     if (!activeMessageId) return null;
 
     const { data, error } = await supabase
@@ -47,7 +47,7 @@ const ChatBox = () => {
     if (insertError) throw insertError;
 
     return inserted?.[0] || { id: activeMessageId, messages: [] };
-  }, [messagesId, chatMessagesId]);
+  }, [activeMessageId]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 30000);
@@ -57,7 +57,6 @@ const ChatBox = () => {
   // ─── Helper: update both users' chats_data ────────────────────────────────
   const updateChatsData = async (lastMessage) => {
     const peerId = chatUser?.rId ?? chatUser?.rid;
-    const activeMessageId = messagesId || chatMessagesId;
     const userIds = [userData.id, peerId];
 
     for (const id of userIds) {
@@ -86,7 +85,7 @@ const ChatBox = () => {
       if (chatIndex !== -1) {
         chatsData[chatIndex].lastMessage = lastMessage;
         chatsData[chatIndex].updatedAt = Date.now();
-        if (chatsData[chatIndex].rId === userData.id) {
+        if ((chatsData[chatIndex].rId ?? chatsData[chatIndex].rid) === userData.id) {
           chatsData[chatIndex].messageSeen = false;
         }
 
@@ -102,7 +101,7 @@ const ChatBox = () => {
   // ─── Send text message ────────────────────────────────────────────────────
   const sendMessage = async () => {
     try {
-      if (!input || !messagesId) return;
+      if (!input || !activeMessageId) return;
 
       const currentRow = await getOrCreateMessageRow();
 
@@ -118,8 +117,10 @@ const ChatBox = () => {
       const { error: updateError } = await supabase
         .from("messages")
         .update({ messages: updatedMessages })
-        .eq("id", messagesId);
+        .eq("id", activeMessageId);
       if (updateError) throw updateError;
+
+      setMessages([...(updatedMessages || [])].reverse());
 
       await updateChatsData(input.slice(0, 30));
     } catch (error) {
@@ -135,7 +136,7 @@ const ChatBox = () => {
       if (!file) return;
 
       const fileUrl = await upload(file);
-      if (!fileUrl || !messagesId) return;
+      if (!fileUrl || !activeMessageId) return;
 
       const currentRow = await getOrCreateMessageRow();
 
@@ -151,8 +152,10 @@ const ChatBox = () => {
       const { error: updateError } = await supabase
         .from("messages")
         .update({ messages: updatedMessages })
-        .eq("id", messagesId);
+        .eq("id", activeMessageId);
       if (updateError) throw updateError;
+
+      setMessages([...(updatedMessages || [])].reverse());
 
       await updateChatsData("image");
     } catch (error) {
@@ -174,7 +177,7 @@ const ChatBox = () => {
 
   // ─── Realtime messages subscription ──────────────────────────────────────
   useEffect(() => {
-    if (!messagesId) return;
+    if (!activeMessageId) return;
     let pollingId;
 
     // Initial load
@@ -187,14 +190,14 @@ const ChatBox = () => {
     pollingId = setInterval(fetchMessages, 3000);
 
     const channel = supabase
-      .channel(`messages_${messagesId}`)
+      .channel(`messages_${activeMessageId}`)
       .on(
         "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
           table: "messages",
-          filter: `id=eq.${messagesId}`,
+          filter: `id=eq.${activeMessageId}`,
         },
         (payload) => {
           setMessages([...(payload.new.messages || [])].reverse());
@@ -206,7 +209,7 @@ const ChatBox = () => {
       clearInterval(pollingId);
       supabase.removeChannel(channel);
     };
-  }, [messagesId, setMessages, getOrCreateMessageRow]);
+  }, [activeMessageId, setMessages, getOrCreateMessageRow]);
 
   const isOnline =
     now - (chatUser?.userData?.last_seen ? Number(chatUser.userData.last_seen) : 0) <=
