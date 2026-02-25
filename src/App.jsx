@@ -7,6 +7,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { supabase } from "./config/supabase";
 import { AppContext } from "./context/AppContextObject";
+import { Analytics } from "@vercel/analytics/react";
 
 const App = () => {
   const navigate = useNavigate();
@@ -64,6 +65,7 @@ const App = () => {
         <Route path="/chat" element={<Chat />} />
         <Route path="/profile-update" element={<ProfileUpdate />} />
       </Routes>
+      <Analytics />
     </>
   );
 };
