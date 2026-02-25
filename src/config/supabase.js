@@ -220,13 +220,8 @@ export const resetPass = async (email) => {
     return;
   }
   try {
-    const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/reset-password`
-        : undefined;
-
     const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-      redirectTo,
+      redirectTo: "https://chatappalokvadera.dev/reset-password",
     });
     if (error) throw error;
     toast.success("Password reset email sent. Check your inbox.");
