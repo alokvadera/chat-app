@@ -40,6 +40,15 @@
     border-radius: 4px;
     cursor: pointer;
 }
+.google-login-btn {
+    background-color: white !important;
+    color: #333 !important;
+    border: 1px solid #dadce0 !important;
+    font-weight: 500;
+}
+.google-login-btn:hover {
+    background-color: #f8f9fa !important;
+}
 .login-term{
     display: flex;
     gap: 5 px;

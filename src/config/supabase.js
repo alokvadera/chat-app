@@ -8,7 +8,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true, // Enable OAuth callback detection
   },
 });
 
@@ -244,6 +244,22 @@ export const resetPass = async (email) => {
     toast.success("Password reset email sent. Check your inbox.");
   } catch (error) {
     logDevError(error);
+    toast.error(toUserErrorMessage(error));
+  }
+};
+
+// Google OAuth login
+export const loginWithGoogle = async () => {
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) throw error;
+  } catch (error) {
+    logDevError("Google login failed:", error);
     toast.error(toUserErrorMessage(error));
   }
 };

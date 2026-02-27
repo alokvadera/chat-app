@@ -1,7 +1,7 @@
 import "./Login.css";
 import assets from "../../assets/assets";
 import React, { useContext, useState } from "react";
-import { signup, login, resetPass } from "../../config/supabase";
+import { signup, login, resetPass, loginWithGoogle } from "../../config/supabase";
 import { AppContext } from "../../context/AppContextObject";
 
 const Login = () => {
@@ -85,6 +85,16 @@ const Login = () => {
             : currState === "signup"
               ? "Create Account"
               : "Login"}
+        </button>
+
+        {/* Google OAuth Button */}
+        <button
+          type="button"
+          onClick={loginWithGoogle}
+          disabled={isSubmitting}
+          className="google-login-btn"
+        >
+          Continue with Google
         </button>
 
         <div className="login-term">
