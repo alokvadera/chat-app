@@ -92,7 +92,6 @@ const Login = () => {
           type="button"
           onClick={loginWithGoogle}
           disabled={isSubmitting}
-          className="google-login-btn"
         >
           Continue with Google
         </button>
