@@ -3,6 +3,23 @@ import { notificationHelper } from "./notificationManager";
 let activeZegoInstance = null;
 let moduleZegoPromise = null;
 
+const isValidZegoSdk = (candidate) =>
+  !!candidate &&
+  typeof candidate.create === "function" &&
+  typeof candidate.generateKitTokenForTest === "function";
+
+const normalizeZegoSdk = (source) => {
+  const candidates = [
+    source,
+    source?.default,
+    source?.ZegoUIKitPrebuilt,
+    source?.default?.ZegoUIKitPrebuilt,
+    source?.default?.default,
+  ];
+
+  return candidates.find(isValidZegoSdk) || null;
+};
+
 const ensureZegoRoot = () => {
   let root =
     document.getElementById("video-call-root") ||
@@ -25,14 +42,15 @@ const ensureZegoRoot = () => {
 };
 
 const waitForGlobalZegoSdk = async () => {
-  if (window.ZegoUIKitPrebuilt) return window.ZegoUIKitPrebuilt;
+  const globalSdk = normalizeZegoSdk(window.ZegoUIKitPrebuilt);
+  if (globalSdk) return globalSdk;
   return null;
 };
 
 const waitForModuleZegoSdk = async () => {
   if (!moduleZegoPromise) {
     moduleZegoPromise = import("@zegocloud/zego-uikit-prebuilt")
-      .then((mod) => mod?.default || mod?.ZegoUIKitPrebuilt || mod)
+      .then((mod) => normalizeZegoSdk(mod))
       .catch(() => null);
   }
 
@@ -66,8 +84,8 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
     }
 
     const ZegoUIKitPrebuilt = await resolveZegoSdk();
-    if (!ZegoUIKitPrebuilt) {
-      throw new Error("Zego SDK unavailable.");
+    if (!isValidZegoSdk(ZegoUIKitPrebuilt)) {
+      throw new Error("Zego SDK unavailable or invalid export shape.");
     }
 
     const userID = String(user.id || user.userId || `user_${Date.now()}`);
