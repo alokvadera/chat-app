@@ -50,12 +50,19 @@ export default function handler(req, res) {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const appIDRaw = process.env.ZEGO_APP_ID;
-  const serverSecret = String(process.env.ZEGO_SERVER_SECRET || "").trim();
+  const appIDRaw = process.env.ZEGO_APP_ID || process.env.VITE_ZEGO_APP_ID;
+  const serverSecret = String(
+    process.env.ZEGO_SERVER_SECRET || process.env.VITE_ZEGO_SERVER_SECRET || "",
+  ).trim();
   const appID = Number(appIDRaw);
 
   if (!Number.isFinite(appID) || !serverSecret) {
-    return res.status(500).json({ error: "ZEGO server configuration is missing." });
+    const missing = [];
+    if (!Number.isFinite(appID)) missing.push("ZEGO_APP_ID");
+    if (!serverSecret) missing.push("ZEGO_SERVER_SECRET");
+    return res.status(500).json({
+      error: `ZEGO server configuration is missing: ${missing.join(", ")}`,
+    });
   }
 
   const { roomID, userID, userName } = req.body || {};
