@@ -18,6 +18,7 @@ const Login = () => {
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [knownAvatar, setKnownAvatar] = useState("");
 
@@ -101,6 +102,10 @@ const Login = () => {
               type="email"
               placeholder="name@company.com"
               className="form-input"
+              autoComplete="email"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="none"
               disabled={isSubmitting}
               required
             />
@@ -115,15 +120,28 @@ const Login = () => {
                 </p>
               ) : null}
             </div>
-            <input
-              onChange={(e) => setPassword(e.target.value)}
-              value={password}
-              type="password"
-              placeholder="••••••••"
-              className="form-input"
-              disabled={isSubmitting}
-              required
-            />
+            <div className="password-input-wrap">
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword((prev) => !prev)}
+                title={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                disabled={isSubmitting}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+              <input
+                onChange={(e) => setPassword(e.target.value)}
+                value={password}
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                className="form-input"
+                autoComplete={currState === "signup" ? "new-password" : "current-password"}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
           </div>
 
           <button type="submit" disabled={isSubmitting}>
