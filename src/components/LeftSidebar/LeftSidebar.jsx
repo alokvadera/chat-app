@@ -1,13 +1,18 @@
 import React, { useContext, useEffect, useState } from "react";
 import "./LeftSidebar.css";
 import assets from "../../assets/assets";
-import { useNavigate } from "react-router-dom";
-import { supabase, toUserErrorMessage } from "../../config/supabase";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  isDesignPreviewMode,
+  supabase,
+  toUserErrorMessage,
+} from "../../config/supabase";
 import { AppContext } from "../../context/AppContextObject";
-import { toast } from "react-toastify";
+import { notificationHelper } from "../../lib/notificationManager";
 
 const LeftSidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     userData,
     chatData,
@@ -17,6 +22,8 @@ const LeftSidebar = () => {
     messagesId,
     chatVisible,
     setChatVisible,
+    setMessages,
+    isUserOnline,
   } = useContext(AppContext);
 
   const [user, setUser] = useState(null);
@@ -38,6 +45,7 @@ const LeftSidebar = () => {
         "",
     ).trim();
   const activeMessageId = getMessageId(chatUser);
+  const isMessagesRoute = location.pathname === "/chat";
 
   const appendChatForUser = async (targetId, entry) => {
     const { data, error } = await supabase
@@ -84,6 +92,13 @@ const LeftSidebar = () => {
     try {
       const input = e.target.value;
       setSearchTerm(input);
+
+      if (isDesignPreviewMode) {
+        setShowSearch(false);
+        setUser(null);
+        return;
+      }
+
       if (!input) {
         setShowSearch(false);
         setUser(null);
@@ -111,13 +126,18 @@ const LeftSidebar = () => {
       );
       setUser(candidate || null);
     } catch (error) {
-      toast.error(toUserErrorMessage(error));
+      notificationHelper.error(toUserErrorMessage(error));
     }
   };
 
   // ─── Add new chat ─────────────────────────────────────────────────────────
   const addChat = async () => {
     try {
+      if (isDesignPreviewMode) {
+        notificationHelper.info("Search/add chat is disabled in design preview mode.");
+        return;
+      }
+
       if (!user?.id || !userData?.id) return;
 
       const existingChat = chatData.find((chat) => getPeerId(chat) === user.id);
@@ -167,7 +187,7 @@ const LeftSidebar = () => {
       setShowSearch(false);
       setChatVisible(true);
     } catch (error) {
-      toast.error(toUserErrorMessage(error));
+      notificationHelper.error(toUserErrorMessage(error));
     }
   };
 
@@ -180,8 +200,16 @@ const LeftSidebar = () => {
         messageId: getMessageId(item),
       };
 
+      if (isDesignPreviewMode) {
+        setMessagesId(normalizedItem.messageId);
+        setChatUser(normalizedItem);
+        setMessages([...(normalizedItem.previewMessages || [])].reverse());
+        setChatVisible(true);
+        return;
+      }
+
       if (!normalizedItem.rId || !normalizedItem.messageId) {
-        toast.error("Corrupt chat record. Missing chat/message id.");
+        notificationHelper.error("Corrupt chat record. Missing chat/message id.");
         return;
       }
 
@@ -217,7 +245,7 @@ const LeftSidebar = () => {
 
       setChatVisible(true);
     } catch (error) {
-      toast.error(toUserErrorMessage(error));
+      notificationHelper.error(toUserErrorMessage(error));
     }
   };
 
@@ -262,14 +290,22 @@ const LeftSidebar = () => {
       <div className="ls-top">
         <div className="ls-nav">
           <img src={assets.logo} className="logo" alt="" />
-          <div className="menu">
-            <img src={assets.menu_icon} alt="" />
-            <div className="sub-menu">
-              <p onClick={() => navigate("/profile-update")}>Edit Profile</p>
-              <hr />
-              <p onClick={async () => await supabase.auth.signOut()}>Logout</p>
-            </div>
-          </div>
+        </div>
+        <button
+          className="new-message-btn"
+          onClick={() => notificationHelper.info("Feature coming soon")}
+        >
+          + New Message
+        </button>
+        <div className="ls-mini-links">
+          <p
+            className={isMessagesRoute ? "active" : ""}
+            onClick={() => navigate("/chat")}
+          >
+            Messages
+          </p>
+          <p onClick={() => notificationHelper.info("Feature coming soon")}>Contacts</p>
+          <p onClick={() => navigate("/profile-update")}>Settings</p>
         </div>
         <div className="ls-search">
           <img src={assets.search_icon} alt="" />
@@ -289,23 +325,29 @@ const LeftSidebar = () => {
             <p>{user.name}</p>
           </div>
         ) : (
-          chatData.map((item, index) => (
-            <div
-              onClick={() => setChat(item)}
-              key={getMessageId(item) || `${getPeerId(item)}_${index}`}
-              className={`friends ${
-                item.messageSeen || getMessageId(item) === messagesId
-                  ? ""
-                  : "border"
-              }`}
-            >
-              <img src={item.userData.avatar || assets.avatar_icon} alt="" />
-              <div>
-                <p>{item.userData.name}</p>
-                <span>{item.lastMessage}</span>
+          chatData.map((item, index) => {
+            const online = isUserOnline(item.userData);
+            return (
+              <div
+                onClick={() => setChat(item)}
+                key={getMessageId(item) || `${getPeerId(item)}_${index}`}
+                className={`friends ${
+                  item.messageSeen || getMessageId(item) === messagesId
+                    ? ""
+                    : "border"
+                }`}
+              >
+                <img src={item.userData.avatar || assets.avatar_icon} alt="" />
+                <div>
+                  <p>{item.userData.name}</p>
+                  <span>{item.lastMessage}</span>
+                </div>
+                <span className={`friend-status ${online ? "online" : "offline"}`}>
+                  {online ? "Online" : "Offline"}
+                </span>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

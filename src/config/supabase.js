@@ -1,16 +1,61 @@
 import { createClient } from "@supabase/supabase-js";
-import { toast } from "react-toastify";
+import { notificationHelper } from "../lib/notificationManager";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const designPreviewFromEnv = String(import.meta.env.VITE_DESIGN_PREVIEW || "").toLowerCase();
+const designPreviewFromQuery =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).get("preview") === "design";
+export const isDesignPreviewMode =
+  import.meta.env.DEV && (designPreviewFromEnv === "true" || designPreviewFromQuery);
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true, // Enable OAuth callback detection
+const SUPABASE_PLACEHOLDER_RE = /<project-ref>|<your-project-ref>|example\.supabase\.co/i;
+const isLikelyValidSupabaseUrl = (value = "") => {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" && parsed.hostname.endsWith(".supabase.co");
+  } catch {
+    return false;
+  }
+};
+
+const getSupabaseConfigIssue = () => {
+  if (!supabaseUrl || !supabaseKey) {
+    return "Missing Supabase env vars. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.";
+  }
+
+  if (SUPABASE_PLACEHOLDER_RE.test(supabaseUrl) || !isLikelyValidSupabaseUrl(supabaseUrl)) {
+    return "VITE_SUPABASE_URL is invalid. Use your exact Supabase project URL: https://<project-ref>.supabase.co";
+  }
+
+  if (String(supabaseKey).trim().length < 40) {
+    return "VITE_SUPABASE_ANON_KEY looks invalid. Copy the anon key from Supabase project settings.";
+  }
+
+  return "";
+};
+
+const supabaseConfigIssue = getSupabaseConfigIssue();
+const isSupabaseConfigValid = !supabaseConfigIssue;
+const isLocalDev = import.meta.env.DEV && window.location.hostname === "localhost";
+
+if (import.meta.env.DEV && supabaseConfigIssue) {
+  console.error("[Supabase config]", supabaseConfigIssue);
+}
+
+export const supabase = createClient(
+  isSupabaseConfigValid ? supabaseUrl : "https://invalid-project-ref.supabase.co",
+  isSupabaseConfigValid ? supabaseKey : "invalid-anon-key",
+  {
+    auth: {
+      persistSession: isSupabaseConfigValid,
+      autoRefreshToken: isSupabaseConfigValid,
+      detectSessionInUrl: true, // Enable OAuth callback detection
+      ...(isLocalDev ? { multiTab: false } : {}),
+    },
   },
-});
+);
 
 const normalizeUsername = (value = "") =>
   value
@@ -58,6 +103,10 @@ const logDevWarn = (...args) => {
 };
 
 export const toUserErrorMessage = (error) => {
+  if (!isSupabaseConfigValid) {
+    return supabaseConfigIssue;
+  }
+
   const message = error?.message || String(error || "Unknown error");
   const lower = message.toLowerCase();
 
@@ -79,6 +128,10 @@ export const toUserErrorMessage = (error) => {
 
   if (lower.includes("failed to fetch") || lower.includes("timed out")) {
     return "Cannot reach server right now. Check your network and try again.";
+  }
+
+  if (lower.includes("err_name_not_resolved") || lower.includes("name_not_resolved")) {
+    return "Supabase hostname cannot be resolved. Verify VITE_SUPABASE_URL in .env and your DNS/network settings.";
   }
 
   if (lower.includes("signal is aborted")) {
@@ -150,9 +203,13 @@ export const ensureUserProfile = async (user, fallback = {}) => {
 
 export const signup = async (username, email, password) => {
   try {
+    if (!isSupabaseConfigValid) {
+      throw new Error(supabaseConfigIssue);
+    }
+
     const normalizedUsername = normalizeUsername(username);
     if (!normalizedUsername) {
-      toast.error("Please enter a valid username");
+      notificationHelper.error("Please enter a valid username");
       return { ok: false };
     }
 
@@ -187,21 +244,25 @@ export const signup = async (username, email, password) => {
     }
 
     if (hasSession) {
-      toast.success("Account created. Continue to complete your profile.");
+      notificationHelper.success("Account created. Continue to complete your profile.");
       return { ok: true, needsEmailVerification: false, user };
     }
 
-    toast.success("Account created. Please verify email, then login.");
+    notificationHelper.success("Account created. Please verify email, then login.");
     return { ok: true, needsEmailVerification: true, user };
   } catch (error) {
     logDevError("Signup failed:", error);
-    toast.error(toUserErrorMessage(error));
+    notificationHelper.error(toUserErrorMessage(error));
     return { ok: false, error, rateLimited: isRateLimitError(error) };
   }
 };
 
 export const login = async (email, password) => {
   try {
+    if (!isSupabaseConfigValid) {
+      throw new Error(supabaseConfigIssue);
+    }
+
     const { data, error } = await withTimeout(
       supabase.auth.signInWithPassword({
         email,
@@ -215,7 +276,7 @@ export const login = async (email, password) => {
     return { ok: true, user: data.user, session: data.session };
   } catch (error) {
     logDevError("Login failed:", error);
-    toast.error(toUserErrorMessage(error));
+    notificationHelper.error(toUserErrorMessage(error));
     return { ok: false, error };
   }
 };
@@ -226,31 +287,39 @@ export const logout = async () => {
     if (error) throw error;
   } catch (error) {
     logDevError(error);
-    toast.error(toUserErrorMessage(error));
+    notificationHelper.error(toUserErrorMessage(error));
   }
 };
 
 export const resetPass = async (email) => {
   const cleanEmail = email?.trim().toLowerCase();
   if (!cleanEmail) {
-    toast.error("Enter your email first");
+    notificationHelper.error("Enter your email first");
     return;
   }
   try {
+    if (!isSupabaseConfigValid) {
+      throw new Error(supabaseConfigIssue);
+    }
+
     const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: "https://chatappalokvadera.dev/reset-password",
     });
     if (error) throw error;
-    toast.success("Password reset email sent. Check your inbox.");
+    notificationHelper.success("Password reset email sent. Check your inbox.");
   } catch (error) {
     logDevError(error);
-    toast.error(toUserErrorMessage(error));
+    notificationHelper.error(toUserErrorMessage(error));
   }
 };
 
 // Google OAuth login
 export const loginWithGoogle = async () => {
   try {
+    if (!isSupabaseConfigValid) {
+      throw new Error(supabaseConfigIssue);
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -260,6 +329,6 @@ export const loginWithGoogle = async () => {
     if (error) throw error;
   } catch (error) {
     logDevError("Google login failed:", error);
-    toast.error(toUserErrorMessage(error));
+    notificationHelper.error(toUserErrorMessage(error));
   }
 };

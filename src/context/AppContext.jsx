@@ -1,10 +1,81 @@
-import { useCallback, useEffect, useState } from "react";
-import { ensureUserProfile, supabase, toUserErrorMessage } from "../config/supabase";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ensureUserProfile,
+  isDesignPreviewMode,
+  supabase,
+  toUserErrorMessage,
+} from "../config/supabase";
+import { setKnownUser } from "../lib/knownUser";
+import { startVideoSession } from "../lib/zegoCall";
+import {
+  getUserPreferencesFromStorage,
+  normalizeUserPreferences,
+  saveUserPreferencesToStorage,
+} from "../lib/userPreferences";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { notificationHelper } from "../lib/notificationManager";
 import { AppContext } from "./AppContextObject";
 
+const PREVIEW_ME = {
+  id: "preview-me",
+  email: "preview@chatapp.local",
+  username: "alok_preview",
+  name: "Alok Preview",
+  avatar: "",
+  bio: "Preview mode: local UI without backend",
+  last_seen: Date.now(),
+  profile_visibility: "public",
+  typing_indicators: "on",
+  allow_audio_calls: true,
+  allow_video_calls: true,
+};
+
+const PREVIEW_FRIEND = {
+  id: "preview-friend",
+  email: "friend@chatapp.local",
+  username: "design_friend",
+  name: "Design Friend",
+  avatar: "",
+  bio: "Let’s verify this layout!",
+  last_seen: Date.now(),
+  profile_visibility: "public",
+  typing_indicators: "on",
+  allow_audio_calls: true,
+  allow_video_calls: true,
+};
+
+const PREVIEW_MESSAGES = [
+  {
+    sId: "preview-friend",
+    text: "Hey! This is local preview mode.",
+    createdAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+  },
+  {
+    sId: "preview-me",
+    text: "Perfect, I just need to check the UI.",
+    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+  },
+  {
+    sId: "preview-friend",
+    text: "Open profile page and responsive layout too.",
+    createdAt: new Date(Date.now() - 1000 * 60 * 7).toISOString(),
+  },
+];
+
+const PREVIEW_CHAT = {
+  rId: PREVIEW_FRIEND.id,
+  messageId: "preview-thread-1",
+  lastMessage: PREVIEW_MESSAGES[PREVIEW_MESSAGES.length - 1].text,
+  updatedAt: Date.now(),
+  messageSeen: true,
+  userData: PREVIEW_FRIEND,
+  previewMessages: PREVIEW_MESSAGES,
+};
+
 const isDev = import.meta.env.DEV;
+const ONLINE_WINDOW_MS = 70000;
+const PRESENCE_HEARTBEAT_MS = 25000;
+const PRESENCE_WRITE_DEBOUNCE_MS = 10000;
 const logWarn = (...args) => {
   if (isDev) console.warn(...args);
 };
@@ -37,6 +108,8 @@ const fallbackChatUser = (id) => ({
   avatar: "",
   bio: "",
   last_seen: 0,
+  allow_audio_calls: true,
+  allow_video_calls: true,
 });
 
 const isAuthOrRlsError = (error) => {
@@ -66,6 +139,10 @@ const AppContextProvider = (props) => {
   const [messages, setMessages] = useState([]);
   const [chatUser, setChatUser] = useState(null);
   const [chatVisible, setChatVisible] = useState(false);
+  const [chatInfoPanelOpen, setChatInfoPanelOpen] = useState(false);
+  const callChannelRef = useRef(null);
+  const callChannelReadyRef = useRef(false);
+  const lastPresenceUpdateRef = useRef(0);
 
   const clearAppState = useCallback(() => {
     setUserData(null);
@@ -74,7 +151,75 @@ const AppContextProvider = (props) => {
     setMessages([]);
     setChatUser(null);
     setChatVisible(false);
+    setChatInfoPanelOpen(false);
   }, []);
+
+  const updateCurrentUserPreferences = useCallback(async (preferences = {}) => {
+    const currentUserId = String(userData?.id || "").trim();
+    if (!currentUserId) return { ok: false };
+
+    const normalizedPreferences = normalizeUserPreferences(preferences, userData || {});
+    const nextUserData = {
+      ...(userData || {}),
+      profile_visibility: normalizedPreferences.profile_visibility,
+      typing_indicators: normalizedPreferences.typing_indicators,
+      allow_audio_calls: normalizedPreferences.allow_audio_calls,
+      allow_video_calls: normalizedPreferences.allow_video_calls,
+    };
+
+    setUserData(nextUserData);
+    setKnownUser(nextUserData);
+    saveUserPreferencesToStorage(currentUserId, nextUserData);
+
+    if (isDesignPreviewMode) {
+      return { ok: true };
+    }
+
+    let updateError = null;
+    const now = Date.now();
+    const updatePayload = {
+      profile_visibility: nextUserData.profile_visibility,
+      typing_indicators: nextUserData.typing_indicators,
+      allow_audio_calls: nextUserData.allow_audio_calls,
+      allow_video_calls: nextUserData.allow_video_calls,
+      last_seen: nextUserData.profile_visibility === "public" ? now : 0,
+    };
+
+    const result = await supabase
+      .from("users")
+      .update(updatePayload)
+      .eq("id", currentUserId);
+    updateError = result.error;
+
+    if (updateError) {
+      const message = String(updateError?.message || "").toLowerCase();
+      const code = String(updateError?.code || "");
+      const looksLikeMissingColumns =
+        code === "42703" ||
+        message.includes("column") ||
+        message.includes("profile_visibility") ||
+        message.includes("typing_indicators") ||
+        message.includes("allow_audio_calls") ||
+        message.includes("allow_video_calls");
+
+      if (looksLikeMissingColumns) {
+        const fallbackResult = await supabase
+          .from("users")
+          .update({
+            last_seen: nextUserData.profile_visibility === "public" ? now : 0,
+          })
+          .eq("id", currentUserId);
+        updateError = fallbackResult.error;
+      }
+    }
+
+    if (updateError) {
+      logWarn("updateCurrentUserPreferences error:", updateError.message || updateError);
+      return { ok: false, error: updateError };
+    }
+
+    return { ok: true };
+  }, [userData]);
 
   const normalizeChatItem = (item = {}) => ({
     ...item,
@@ -96,8 +241,63 @@ const AppContextProvider = (props) => {
     messageSeen: Boolean(item?.messageSeen ?? item?.message_seen ?? true),
   });
 
-  const loadUserData = useCallback(async (uid, authUser = null) => {
+  const isUserOnline = useCallback((targetUser) => {
+    if (String(targetUser?.profile_visibility || "public") === "private") {
+      return false;
+    }
+    const lastSeen = Number(targetUser?.last_seen || 0);
+    if (!lastSeen) return false;
+    return Date.now() - lastSeen <= ONLINE_WINDOW_MS;
+  }, []);
+
+  const writePresence = useCallback(async (force = false) => {
+    if (isDesignPreviewMode) return;
+    const currentUserId = String(userData?.id || "").trim();
+    if (!currentUserId) return;
+    if (String(userData?.profile_visibility || "public") === "private") {
+      if (!force) return;
+      const { error } = await supabase
+        .from("users")
+        .update({ last_seen: 0 })
+        .eq("id", currentUserId);
+      if (error && isDev) {
+        logWarn("writePresence(private) error:", error.message || error);
+      }
+      return;
+    }
+
+    const now = Date.now();
+    if (!force && now - lastPresenceUpdateRef.current < PRESENCE_WRITE_DEBOUNCE_MS) {
+      return;
+    }
+    lastPresenceUpdateRef.current = now;
+
+    const { error } = await supabase
+      .from("users")
+      .update({ last_seen: now })
+      .eq("id", currentUserId);
+
+    if (error && isDev) {
+      logWarn("writePresence error:", error.message || error);
+    }
+  }, [userData?.id, userData?.profile_visibility]);
+
+  const loadUserData = useCallback(async (uid, authUser = null, options = {}) => {
     try {
+      const preserveCurrentRoute = Boolean(options?.preserveCurrentRoute);
+      if (isDesignPreviewMode) {
+        setUserData(PREVIEW_ME);
+        setChatData([PREVIEW_CHAT]);
+        setMessagesId(PREVIEW_CHAT.messageId);
+        setChatUser(PREVIEW_CHAT);
+        setMessages([...(PREVIEW_CHAT.previewMessages || [])].reverse());
+        setChatVisible(true);
+        if (!preserveCurrentRoute) {
+          navigate("/chat");
+        }
+        return;
+      }
+
       let user = authUser;
       if (!user) {
         const {
@@ -143,6 +343,8 @@ const AppContextProvider = (props) => {
           avatar: "",
           bio: "",
           last_seen: Date.now(),
+          allow_audio_calls: true,
+          allow_video_calls: true,
         };
       }
 
@@ -150,23 +352,66 @@ const AppContextProvider = (props) => {
         logWarn("Profile read error after bootstrap:", error.message);
       }
 
-      setUserData(data);
+      const mergedPreferences = normalizeUserPreferences(
+        data,
+        getUserPreferencesFromStorage(uid),
+      );
+      setUserData(mergedPreferences);
+      setKnownUser(mergedPreferences);
+      saveUserPreferencesToStorage(uid, mergedPreferences);
 
-      if (data.avatar && data.name) {
-        navigate("/chat");
-      } else {
-        navigate("/profile-update");
+      if (!preserveCurrentRoute) {
+        if (data.avatar && data.name) {
+          navigate("/chat");
+        } else {
+          navigate("/profile-update");
+        }
       }
 
-      // Update lastSeen in background
-      supabase.from("users").update({ last_seen: Date.now() }).eq("id", uid);
+      void writePresence(true);
     } catch (error) {
       logError("loadUserData error:", error);
-      toast.error(toUserErrorMessage(error));
+      notificationHelper.error(toUserErrorMessage(error));
     }
-  }, [navigate]);
+  }, [navigate, writePresence]);
 
   useEffect(() => {
+    if (isDesignPreviewMode) return;
+    if (!userData?.id) return;
+
+    void writePresence(true);
+    const intervalId = setInterval(() => {
+      void writePresence();
+    }, PRESENCE_HEARTBEAT_MS);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void writePresence(true);
+      }
+    };
+
+    const onWindowFocus = () => {
+      void writePresence(true);
+    };
+
+    const onBeforeUnload = () => {
+      void writePresence(true);
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onWindowFocus);
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onWindowFocus);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [userData?.id, writePresence]);
+
+  useEffect(() => {
+    if (isDesignPreviewMode) return;
     if (!userData?.id) return;
 
     let pollingId;
@@ -206,7 +451,10 @@ const AppContextProvider = (props) => {
       const hydratedChats = normalizedChats
         .map((item) => ({
           ...item,
-          userData: usersById.get(item.rId) || fallbackChatUser(item.rId),
+          userData: normalizeUserPreferences(
+            usersById.get(item.rId) || fallbackChatUser(item.rId),
+            getUserPreferencesFromStorage(item.rId),
+          ),
         }))
         .sort((a, b) => b.updatedAt - a.updatedAt);
 
@@ -270,6 +518,183 @@ const AppContextProvider = (props) => {
     };
   }, [userData]);
 
+  const initiateCall = useCallback(async (targetId, isGroup = false, callType = "video") => {
+    try {
+      const callerId = String(userData?.id || "").trim();
+      const normalizedTargetId = String(targetId || "").trim();
+      if (!callerId || !normalizedTargetId) {
+        throw new Error("Invalid caller or target ID.");
+      }
+
+      if (callerId === normalizedTargetId) {
+        throw new Error("You cannot start a call with yourself.");
+      }
+
+      const { data: targetUser, error: targetReadError } = await supabase
+        .from("users")
+        .select("id,name,username,last_seen,allow_audio_calls,allow_video_calls")
+        .eq("id", normalizedTargetId)
+        .maybeSingle();
+
+      if (targetReadError) {
+        throw targetReadError;
+      }
+
+      if (!targetUser) {
+        throw new Error("Target user not found.");
+      }
+
+      const normalizedTargetUser = normalizeUserPreferences(
+        targetUser,
+        getUserPreferencesFromStorage(normalizedTargetId),
+      );
+
+      if (callType === "audio" && !normalizedTargetUser.allow_audio_calls) {
+        const targetName = String(
+          normalizedTargetUser.name || normalizedTargetUser.username || "This user",
+        );
+        throw new Error(`${targetName} has disabled audio calls.`);
+      }
+
+      if (callType !== "audio" && !normalizedTargetUser.allow_video_calls) {
+        const targetName = String(
+          normalizedTargetUser.name || normalizedTargetUser.username || "This user",
+        );
+        throw new Error(`${targetName} has disabled video calls.`);
+      }
+
+      if (!isUserOnline(normalizedTargetUser)) {
+        const targetName = String(
+          normalizedTargetUser.name || normalizedTargetUser.username || "This user",
+        );
+        throw new Error(`${targetName} is offline. Calls are available only when the user is online.`);
+      }
+
+      const roomID = isGroup
+        ? normalizedTargetId
+        : [callerId, normalizedTargetId].sort((a, b) => a.localeCompare(b)).join("_");
+
+      const callerName = String(
+        userData?.name || userData?.username || userData?.email || "Unknown Caller",
+      );
+      const username = String(userData?.username || callerName);
+      const normalizedCallType = callType === "audio" ? "audio" : "video";
+
+      const waitUntil = Date.now() + 5000;
+      while (!callChannelReadyRef.current && Date.now() < waitUntil) {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 120);
+        });
+      }
+
+      const callChannel = callChannelRef.current;
+      if (!callChannel || !callChannelReadyRef.current) {
+        throw new Error("Failed to subscribe to calls channel.");
+      }
+
+      const sendResult = await callChannel.send({
+        type: "broadcast",
+        event: "VIDEO_CALL_INVITE",
+        payload: {
+          roomID,
+          username,
+          callerName,
+          callerId,
+          targetId: normalizedTargetId,
+          type: normalizedCallType,
+          isGroup: Boolean(isGroup),
+        },
+      });
+
+      if (sendResult?.error) {
+        throw sendResult.error;
+      }
+
+      await startVideoSession(roomID, { id: callerId, name: callerName }, {
+        callType: normalizedCallType,
+      });
+      return { ok: true, roomID };
+    } catch (error) {
+      logError("initiateCall error:", error);
+      notificationHelper.error(toUserErrorMessage(error));
+      return { ok: false, error };
+    }
+  }, [isUserOnline, userData]);
+
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    const notifyRoot =
+      document.getElementById("call-invite-modal") ||
+      document.getElementById("incoming-call-notify");
+    const callerInfo = document.getElementById("caller-info");
+    const acceptBtn = document.getElementById("accept-btn");
+    const declineBtn = document.getElementById("decline-btn");
+
+    let latestPayload = null;
+
+    const hideNotification = () => {
+      if (!notifyRoot) return;
+      notifyRoot.style.display = "none";
+      latestPayload = null;
+    };
+
+    const onAccept = async () => {
+      const roomID = latestPayload?.roomID;
+      if (!roomID) return;
+
+      const currentName = String(
+        userData?.name || userData?.username || userData?.email || "Chat User",
+      );
+      const callType = latestPayload?.type === "audio" ? "audio" : "video";
+
+      hideNotification();
+      await startVideoSession(roomID, { id: userData.id, name: currentName }, { callType });
+    };
+
+    const onDecline = () => {
+      hideNotification();
+    };
+
+    if (acceptBtn) acceptBtn.onclick = onAccept;
+    if (declineBtn) declineBtn.onclick = onDecline;
+
+    const callChannel = supabase
+      .channel("call_channel", {
+        config: {
+          broadcast: { self: true },
+        },
+      })
+      .on("broadcast", { event: "VIDEO_CALL_INVITE" }, ({ payload }) => {
+        if (!payload) return;
+        if (payload.callerId === userData.id) return;
+        if (String(payload.targetId || "").trim() !== String(userData.id)) return;
+
+        latestPayload = payload;
+        const callerName = payload.callerName || payload.username || "Someone";
+        if (callerInfo) {
+          callerInfo.textContent = `${callerName} is calling`;
+        }
+        if (notifyRoot) {
+          notifyRoot.style.display = "block";
+        }
+      })
+      .subscribe((status) => {
+        callChannelReadyRef.current = status === "SUBSCRIBED";
+      });
+
+    callChannelRef.current = callChannel;
+
+    return () => {
+      if (acceptBtn) acceptBtn.onclick = null;
+      if (declineBtn) declineBtn.onclick = null;
+      if (notifyRoot) notifyRoot.style.display = "none";
+      callChannelReadyRef.current = false;
+      callChannelRef.current = null;
+      supabase.removeChannel(callChannel);
+    };
+  }, [userData]);
+
   const value = {
     userData,
     setUserData,
@@ -284,6 +709,11 @@ const AppContextProvider = (props) => {
     setChatUser,
     chatVisible,
     setChatVisible,
+    chatInfoPanelOpen,
+    setChatInfoPanelOpen,
+    initiateCall,
+    isUserOnline,
+    updateCurrentUserPreferences,
     clearAppState,
   };
 

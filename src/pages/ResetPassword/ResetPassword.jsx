@@ -1,21 +1,39 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import { supabase, toUserErrorMessage } from "../../config/supabase";
+import assets from "../../assets/assets";
+import {
+  isDesignPreviewMode,
+  supabase,
+  toUserErrorMessage,
+} from "../../config/supabase";
+import { getKnownUser } from "../../lib/knownUser";
+import { useNotificationContext } from "../../context/NotificationContext";
 import "./ResetPassword.css";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
+  const { notify } = useNotificationContext();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isReady, setIsReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [knownAvatar, setKnownAvatar] = useState("");
+
+  useEffect(() => {
+    const knownUser = getKnownUser();
+    setKnownAvatar(knownUser?.avatar || "");
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
     const bootstrapRecoverySession = async () => {
       try {
+        if (isDesignPreviewMode) {
+          setIsReady(true);
+          return;
+        }
+
         const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
         const type = hashParams.get("type");
         const accessToken = hashParams.get("access_token");
@@ -37,7 +55,7 @@ const ResetPassword = () => {
         if (!isMounted) return;
 
         if (!session?.user) {
-          toast.error("Invalid or expired reset link. Request a new one.");
+          notify.error("Invalid or expired reset link. Request a new one.");
           navigate("/", { replace: true });
           return;
         }
@@ -45,7 +63,7 @@ const ResetPassword = () => {
         setIsReady(true);
       } catch (error) {
         if (!isMounted) return;
-        toast.error(toUserErrorMessage(error));
+        notify.error(toUserErrorMessage(error));
         navigate("/", { replace: true });
       }
     };
@@ -55,32 +73,38 @@ const ResetPassword = () => {
     return () => {
       isMounted = false;
     };
-  }, [navigate]);
+  }, [navigate, notify]);
 
   const onSubmit = async (event) => {
     event.preventDefault();
     if (isSubmitting || !isReady) return;
 
     if (password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+      notify.error("Password must be at least 6 characters.");
       return;
     }
 
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match.");
+      notify.error("Passwords do not match.");
       return;
     }
 
     setIsSubmitting(true);
     try {
+      if (isDesignPreviewMode) {
+        notify.success("Password updated in preview mode.");
+        navigate("/", { replace: true });
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
-      toast.success("Password updated. Please login with your new password.");
+      notify.success("Password updated. Please login with your new password.");
       await supabase.auth.signOut();
       navigate("/", { replace: true });
     } catch (error) {
-      toast.error(toUserErrorMessage(error));
+      notify.error(toUserErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -88,28 +112,49 @@ const ResetPassword = () => {
 
   return (
     <div className="reset-password">
-      <form className="reset-password-form" onSubmit={onSubmit}>
-        <h2>Reset Password</h2>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="New password"
-          required
-          disabled={!isReady || isSubmitting}
-        />
-        <input
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          placeholder="Confirm password"
-          required
-          disabled={!isReady || isSubmitting}
-        />
-        <button type="submit" disabled={!isReady || isSubmitting}>
-          {isSubmitting ? "Updating..." : "Update Password"}
-        </button>
-      </form>
+      <div className="reset-password-glass">
+        <form className="reset-password-form" onSubmit={onSubmit}>
+          <img
+            src={knownAvatar || assets.avatar_icon}
+            alt="Profile"
+            className="reset-password-icon"
+          />
+          <h2>Reset Password</h2>
+          <p className="reset-password-subtitle">
+            Choose a strong new password for your chat-app account.
+          </p>
+
+          <div className="reset-input-group">
+            <label>New Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter new password"
+              required
+              disabled={!isReady || isSubmitting}
+            />
+          </div>
+
+          <div className="reset-input-group">
+            <label>Confirm Password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+              required
+              disabled={!isReady || isSubmitting}
+            />
+          </div>
+
+          <button type="submit" disabled={!isReady || isSubmitting}>
+            {isSubmitting ? "Updating..." : "Update Password →"}
+          </button>
+        </form>
+
+        <p className="reset-password-note">SECURE ACCOUNT RECOVERY · CHAT-APP</p>
+      </div>
     </div>
   );
 };

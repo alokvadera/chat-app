@@ -4,10 +4,17 @@ import Login from "./pages/Login/Login";
 import Chat from "./pages/Chat/Chat";
 import ProfileUpdate from "./pages/ProfileUpdate/ProfileUpdate";
 import ResetPassword from "./pages/ResetPassword/ResetPassword";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { supabase } from "./config/supabase";
+import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
+import Notification from "./components/Notification/Notification";
+import { NotificationProvider } from "./context/NotificationContext";
+import { isDesignPreviewMode, supabase } from "./config/supabase";
 import { AppContext } from "./context/AppContextObject";
+import {
+  applyResolvedTheme,
+  applyThemeMode,
+  getThemeMode,
+  subscribeToSystemThemeChanges,
+} from "./lib/theme";
 
 const App = () => {
   const navigate = useNavigate();
@@ -17,7 +24,7 @@ const App = () => {
   const lastLoadedAtRef = useRef(0);
 
   const safeLoadUserData = useCallback(
-    async (uid, authUser = null) => {
+    async (uid, authUser = null, options = {}) => {
       if (!uid) return;
       const now = Date.now();
       if (
@@ -31,7 +38,7 @@ const App = () => {
       isLoadingUserRef.current = true;
       lastLoadedUidRef.current = uid;
       try {
-        await loadUserData(uid, authUser);
+        await loadUserData(uid, authUser, options);
         lastLoadedAtRef.current = Date.now();
       } finally {
         isLoadingUserRef.current = false;
@@ -39,6 +46,18 @@ const App = () => {
     },
     [loadUserData],
   );
+
+  useEffect(() => {
+    applyThemeMode(getThemeMode());
+
+    const unsubscribe = subscribeToSystemThemeChanges((nextTheme) => {
+      if (getThemeMode() === "system") {
+        applyResolvedTheme(nextTheme);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -58,6 +77,8 @@ const App = () => {
   }, [navigate]);
 
   useEffect(() => {
+    if (isDesignPreviewMode) return;
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -72,7 +93,9 @@ const App = () => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
         if (isResetFlowRoute) return;
         setTimeout(() => {
-          void safeLoadUserData(session.user.id, session.user);
+          void safeLoadUserData(session.user.id, session.user, {
+            preserveCurrentRoute: true,
+          });
         }, 0);
       } else if (event === "SIGNED_OUT") {
         clearAppState();
@@ -86,10 +109,11 @@ const App = () => {
 
   return (
     <>
-      <ToastContainer />
+      <Notification />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/profile-update" element={<ProfileUpdate />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
@@ -97,4 +121,10 @@ const App = () => {
   );
 };
 
-export default App;
+const AppWithProviders = () => (
+  <NotificationProvider>
+    <App />
+  </NotificationProvider>
+);
+
+export default AppWithProviders;

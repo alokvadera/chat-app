@@ -8,6 +8,28 @@
   </head>
   <body>
     <div id="root"></div>
+    <div
+      id="video-call-root"
+      style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:999; background:#000;"
+    ></div>
+    <div
+      id="call-invite-modal"
+      style="display:none; position:fixed; top:20px; right:20px; z-index:1000; background:rgba(255,255,255,0.1); backdrop-filter:blur(10px); padding:20px; border-radius:15px; border:1px solid rgba(255,255,255,0.2); color:white;"
+    >
+      <p id="caller-info" style="margin-top:0; margin-bottom:12px;"></p>
+      <button
+        id="accept-btn"
+        style="background:#2ecc71; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; margin-right:8px;"
+      >
+        Accept
+      </button>
+      <button
+        id="decline-btn"
+        style="background:#e74c3c; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;"
+      >
+        Decline
+      </button>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -14,10 +14,12 @@ const Chat = () => {
       {loading ? (
         <p className="loading">Loading...</p>
       ) : (
-        <div className="chat-container">
-          <LeftSidebar />
-          <ChatBox />
-          <RightSidebar />
+        <div className="chat-shell">
+          <div className="chat-container">
+            <LeftSidebar />
+            <ChatBox />
+            <RightSidebar />
+          </div>
         </div>
       )}
     </div>

@@ -1,38 +1,97 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
 * {
-  margin: 0;           /* ✅ ADD THIS - Removes default margins */
-  padding: 0;          /* ✅ ADD THIS - Removes default padding */
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;  /* ✅ FIXED: Added quotes and fallback */
+  font-family: 'Poppins', sans-serif;
+}
+
+:root {
+  --app-bg: #03060e;
+  --app-bg-a: rgba(0, 94, 255, 0.19);
+  --app-bg-b: rgba(28, 47, 156, 0.23);
+  --shell-bg: linear-gradient(160deg, rgba(10, 14, 24, 0.93), rgba(5, 7, 14, 0.96));
+  --shell-border: rgba(255, 255, 255, 0.09);
+  --panel-bg: rgba(0, 0, 0, 0.56);
+  --panel-soft-bg: rgba(2, 5, 12, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --surface-1: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.1);
+  --text-primary: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.7);
+  --accent-1: #0078ff;
+  --accent-2: #2f92ff;
+  --inbound-msg: rgba(255, 255, 255, 0.12);
+  --scroll-track: #1a1a1a;
+  --scroll-thumb: #333;
+}
+
+html[data-theme='light'] {
+  --app-bg: #eef3fb;
+  --app-bg-a: rgba(0, 104, 255, 0.15);
+  --app-bg-b: rgba(92, 125, 255, 0.13);
+  --shell-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.97), rgba(245, 248, 255, 0.98));
+  --shell-border: rgba(41, 70, 128, 0.16);
+  --panel-bg: rgba(255, 255, 255, 0.78);
+  --panel-soft-bg: rgba(255, 255, 255, 0.8);
+  --panel-border: rgba(55, 93, 170, 0.16);
+  --surface-1: rgba(33, 72, 151, 0.08);
+  --surface-2: rgba(33, 72, 151, 0.14);
+  --text-primary: #102043;
+  --text-muted: rgba(16, 32, 67, 0.7);
+  --accent-1: #0e74ff;
+  --accent-2: #2f92ff;
+  --inbound-msg: rgba(34, 74, 155, 0.12);
+  --scroll-track: #dfe7f6;
+  --scroll-thumb: #8ca4d9;
 }
 
 html, body {
-  margin: 0;           /* ✅ ADD THIS - Ensures no body margin */
-  padding: 0;          /* ✅ ADD THIS - Ensures no body padding */
-  width: 100%;         /* ✅ ADD THIS - Full width */
-  height: 100vh;       /* ✅ ADD THIS - Full viewport height */
-  overflow-x: hidden;  /* ✅ ADD THIS - Prevents horizontal scroll */
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: var(--app-bg);
+  color: var(--text-primary);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
-  width: 100%;         /* ✅ ADD THIS - Full width for React root */
-  min-height: 100vh;   /* ✅ ADD THIS - Full height */
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
 }
 
 ::-webkit-scrollbar {
-  display: none;
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
 }
 
 * {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
 }
-
-img.dot {
-  width: 15px !important;
-}
-
 
 @media screen and (max-width: 900px) {
   .hidden {

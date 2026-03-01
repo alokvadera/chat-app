@@ -20,6 +20,33 @@ In Vercel project settings:
 2. Set `VITE_SUPABASE_ANON_KEY`
 3. Redeploy with cache cleared when changing env vars
 
+## Render deployment (connected repository)
+This repo now includes [`render.yaml`](./render.yaml) for one-click setup on Render.
+
+### What Render will use
+1. Build command: `npm ci && npm run build`
+2. Publish directory: `dist`
+3. SPA rewrite: all routes (`/*`) -> `/index.html`
+
+### Steps
+1. In Render, click **New +** -> **Blueprint**.
+2. Select this GitHub repository.
+3. Confirm service from `render.yaml` and deploy.
+
+### Required environment variables (Render service)
+1. `VITE_SUPABASE_URL`
+2. `VITE_SUPABASE_ANON_KEY`
+
+After adding/changing env vars, trigger a **Manual Deploy**.
+
+### Important for Supabase auth
+In Supabase dashboard -> **Authentication -> URL Configuration**:
+1. Set `Site URL` to your Render production URL
+2. Add redirect URLs for:
+   - your Render production URL
+   - local: `http://localhost:5173`
+   - any preview URL you use
+
 ## Supabase auth checklist
 In Supabase project settings:
 1. `Authentication -> URL Configuration`
