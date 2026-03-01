@@ -130,6 +130,26 @@ const isAuthOrRlsError = (error) => {
   );
 };
 
+const isMissingPreferenceColumnError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  const details = String(error?.details || "").toLowerCase();
+  const code = String(error?.code || "");
+  const status = Number(error?.status || 0);
+
+  return (
+    code === "42703" ||
+    code === "PGRST204" ||
+    message.includes("column") ||
+    message.includes("could not find") ||
+    message.includes("allow_audio_calls") ||
+    message.includes("allow_video_calls") ||
+    details.includes("column") ||
+    details.includes("allow_audio_calls") ||
+    details.includes("allow_video_calls") ||
+    (status === 400 && (message.includes("bad request") || details.includes("bad request")))
+  );
+};
+
 const AppContextProvider = (props) => {
   const navigate = useNavigate();
 
@@ -143,6 +163,7 @@ const AppContextProvider = (props) => {
   const callChannelRef = useRef(null);
   const callChannelReadyRef = useRef(false);
   const lastPresenceUpdateRef = useRef(0);
+  const preferenceColumnsUnsupportedRef = useRef(false);
 
   const clearAppState = useCallback(() => {
     setUserData(null);
@@ -177,13 +198,19 @@ const AppContextProvider = (props) => {
 
     let updateError = null;
     const now = Date.now();
-    const updatePayload = {
+    const basePayload = {
+      last_seen: nextUserData.profile_visibility === "public" ? now : 0,
+    };
+    const extendedPayload = {
       profile_visibility: nextUserData.profile_visibility,
       typing_indicators: nextUserData.typing_indicators,
       allow_audio_calls: nextUserData.allow_audio_calls,
       allow_video_calls: nextUserData.allow_video_calls,
-      last_seen: nextUserData.profile_visibility === "public" ? now : 0,
+      ...basePayload,
     };
+    const updatePayload = preferenceColumnsUnsupportedRef.current
+      ? basePayload
+      : extendedPayload;
 
     const result = await supabase
       .from("users")
@@ -192,22 +219,11 @@ const AppContextProvider = (props) => {
     updateError = result.error;
 
     if (updateError) {
-      const message = String(updateError?.message || "").toLowerCase();
-      const code = String(updateError?.code || "");
-      const looksLikeMissingColumns =
-        code === "42703" ||
-        message.includes("column") ||
-        message.includes("profile_visibility") ||
-        message.includes("typing_indicators") ||
-        message.includes("allow_audio_calls") ||
-        message.includes("allow_video_calls");
-
-      if (looksLikeMissingColumns) {
+      if (isMissingPreferenceColumnError(updateError)) {
+        preferenceColumnsUnsupportedRef.current = true;
         const fallbackResult = await supabase
           .from("users")
-          .update({
-            last_seen: nextUserData.profile_visibility === "public" ? now : 0,
-          })
+          .update(basePayload)
           .eq("id", currentUserId);
         updateError = fallbackResult.error;
       }
@@ -530,11 +546,25 @@ const AppContextProvider = (props) => {
         throw new Error("You cannot start a call with yourself.");
       }
 
-      const { data: targetUser, error: targetReadError } = await supabase
+      const baseSelect = "id,name,username,last_seen";
+      const extendedSelect = `${baseSelect},allow_audio_calls,allow_video_calls`;
+
+      let targetQuery = await supabase
         .from("users")
-        .select("id,name,username,last_seen,allow_audio_calls,allow_video_calls")
+        .select(preferenceColumnsUnsupportedRef.current ? baseSelect : extendedSelect)
         .eq("id", normalizedTargetId)
         .maybeSingle();
+
+      if (targetQuery.error && isMissingPreferenceColumnError(targetQuery.error)) {
+        preferenceColumnsUnsupportedRef.current = true;
+        targetQuery = await supabase
+          .from("users")
+          .select(baseSelect)
+          .eq("id", normalizedTargetId)
+          .maybeSingle();
+      }
+
+      const { data: targetUser, error: targetReadError } = targetQuery;
 
       if (targetReadError) {
         throw targetReadError;
