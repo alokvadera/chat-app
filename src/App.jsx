@@ -92,9 +92,13 @@ const App = () => {
 
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
         if (isResetFlowRoute) return;
+        const currentPath =
+          typeof window !== "undefined" ? window.location.pathname : "/";
+        const preserveForInAppRoute =
+          currentPath === "/chat" || currentPath === "/profile-update";
         setTimeout(() => {
           void safeLoadUserData(session.user.id, session.user, {
-            preserveCurrentRoute: true,
+            preserveCurrentRoute: preserveForInAppRoute,
           });
         }, 0);
       } else if (event === "SIGNED_OUT") {

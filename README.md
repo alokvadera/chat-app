@@ -18,7 +18,19 @@ This repo includes [`vercel.json`](./vercel.json) with:
 In Vercel project settings:
 1. Set `VITE_SUPABASE_URL`
 2. Set `VITE_SUPABASE_ANON_KEY`
+3. Set `VITE_ZEGO_APP_ID`
+4. Set server-only `ZEGO_APP_ID` (same numeric value)
+5. Set server-only `ZEGO_SERVER_SECRET`
 3. Redeploy with cache cleared when changing env vars
+
+## ZEGO secret safety (Vercel)
+Do NOT store ZEGO server secret in any `VITE_*` variable.
+
+Use:
+1. `VITE_ZEGO_APP_ID` for frontend
+2. `ZEGO_APP_ID` + `ZEGO_SERVER_SECRET` for Vercel serverless function (`/api/zego-token`)
+
+The frontend now requests call tokens from `/api/zego-token`.
 
 ## Render deployment (connected repository)
 This repo now includes [`render.yaml`](./render.yaml) for one-click setup on Render.

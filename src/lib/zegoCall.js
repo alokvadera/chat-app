@@ -60,11 +60,9 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
     }
 
     const appID = Number(import.meta.env.VITE_ZEGO_APP_ID);
-    const serverSecret = String(import.meta.env.VITE_ZEGO_SERVER_SECRET || "").trim();
-
-    if (!Number.isFinite(appID) || !serverSecret) {
-      notificationHelper.error("Zego video call is not configured. Add VITE_ZEGO_APP_ID and VITE_ZEGO_SERVER_SECRET.");
-      return { ok: false, error: new Error("Missing Zego configuration") };
+    if (!Number.isFinite(appID)) {
+      notificationHelper.error("Zego video call is not configured. Add VITE_ZEGO_APP_ID.");
+      return { ok: false, error: new Error("Missing Zego APP ID") };
     }
 
     const ZegoUIKitPrebuilt = await resolveZegoSdk();
@@ -76,13 +74,36 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
     const userName = String(user.name || user.userName || "Chat User");
     const callType = options?.callType === "audio" ? "audio" : "video";
 
-    const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-      appID,
-      serverSecret,
-      roomID,
-      userID,
-      userName,
-    );
+    let kitToken = "";
+    try {
+      const response = await fetch("/api/zego-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ roomID, userID, userName }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.token) {
+        throw new Error(data?.error || "Unable to fetch ZEGO token from server.");
+      }
+
+      kitToken = String(data.token);
+    } catch (error) {
+      const serverSecret = String(import.meta.env.VITE_ZEGO_SERVER_SECRET || "").trim();
+      if (import.meta.env.DEV && serverSecret) {
+        kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
+          appID,
+          serverSecret,
+          roomID,
+          userID,
+          userName,
+        );
+      } else {
+        throw error;
+      }
+    }
 
     const root = ensureZegoRoot();
     root.innerHTML = "";

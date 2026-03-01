@@ -3,8 +3,9 @@
   min-height: 100svh;
   min-height: 100dvh;
   background:
-    linear-gradient(90deg, rgba(225, 234, 247, 0.95), rgba(242, 247, 255, 0.96) 40%, rgba(233, 241, 252, 0.95)),
-    #edf2fa;
+    radial-gradient(circle at 12% 12%, var(--app-bg-a), transparent 32%),
+    radial-gradient(circle at 90% 86%, var(--app-bg-b), transparent 35%),
+    var(--app-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -20,19 +21,17 @@
 }
 
 .login-form {
-  background: linear-gradient(175deg, rgba(255, 255, 255, 0.94), rgba(250, 253, 255, 0.92));
+  background: var(--shell-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   padding: 30px 30px 28px;
   border-radius: 26px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--shell-border);
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: 100%;
-  box-shadow:
-    0 22px 48px rgba(47, 74, 130, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.38);
 }
 
 .login-form-icon {
@@ -47,7 +46,7 @@
 
 .login-form h2 {
   font-weight: 700;
-  color: #1b2536;
+  color: var(--text-primary);
   text-align: center;
   font-size: 42px;
   margin-bottom: 2px;
@@ -57,7 +56,7 @@
 .login-subtitle {
   text-align: center;
   font-size: 14px;
-  color: rgba(27, 37, 54, 0.68);
+  color: var(--text-muted);
   margin-bottom: 6px;
 }
 
@@ -69,7 +68,7 @@
 
 .input-group label {
   font-size: 13px;
-  color: rgba(25, 38, 61, 0.84);
+  color: var(--text-primary);
   font-weight: 500;
 }
 
@@ -81,45 +80,45 @@
 
 .forgot-mini {
   font-size: 13px;
-  color: #277ec7;
+  color: var(--accent-2);
   cursor: pointer;
 }
 
 .form-input {
   padding: 14px 14px;
-  background: rgba(83, 116, 180, 0.08);
-  border: 1px solid rgba(74, 100, 148, 0.08);
+  background: var(--surface-1);
+  border: 1px solid var(--panel-border);
   border-radius: 13px;
   outline: none;
-  color: #1e2a3e;
-  -webkit-text-fill-color: #1e2a3e;
-  caret-color: #1e2a3e;
+  color: var(--text-primary);
+  -webkit-text-fill-color: var(--text-primary);
+  caret-color: var(--text-primary);
   font-size: 14px;
   transition: all 0.3s;
 }
 
 .form-input:focus {
-  border-color: rgba(38, 131, 255, 0.65);
-  background: rgba(255, 255, 255, 0.85);
+  border-color: var(--accent-2);
+  background: var(--surface-2);
 }
 
 .form-input::placeholder {
-  color: rgba(25, 39, 64, 0.36);
+  color: var(--text-muted);
 }
 
 .form-input:-webkit-autofill,
 .form-input:-webkit-autofill:hover,
 .form-input:-webkit-autofill:focus,
 .form-input:-webkit-autofill:active {
-  -webkit-text-fill-color: #1e2a3e;
-  caret-color: #1e2a3e;
-  box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.9) inset;
+  -webkit-text-fill-color: var(--text-primary);
+  caret-color: var(--text-primary);
+  box-shadow: 0 0 0px 1000px var(--surface-1) inset;
   transition: background-color 5000s ease-in-out 0s;
 }
 
 .login-form button {
   padding: 14px;
-  background: linear-gradient(90deg, #0076ff, #2f8cff);
+  background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
   color: white;
   font-size: 23px;
   font-weight: 600;
@@ -153,12 +152,12 @@
   content: "";
   height: 1px;
   flex: 1;
-  background: rgba(35, 57, 96, 0.14);
+  background: var(--panel-border);
 }
 
 .or-divider span {
   font-size: 11px;
-  color: rgba(28, 48, 86, 0.42);
+  color: var(--text-muted);
   margin: 0 10px;
   letter-spacing: 0.08em;
 }
@@ -168,13 +167,13 @@
 }
 
 .login-form button.alt-btn {
-  background: rgba(88, 121, 183, 0.06);
-  border: 1px solid rgba(73, 109, 172, 0.15);
+  background: var(--surface-1);
+  border: 1px solid var(--panel-border);
   box-shadow: none;
   border-radius: 16px;
   font-size: 22px;
   padding: 13px;
-  color: #253653;
+  color: var(--text-primary);
   width: 100%;
 }
 
@@ -187,19 +186,19 @@
 
 .login-toggle {
   font-size: 17px;
-  color: rgba(23, 37, 60, 0.72);
+  color: var(--text-muted);
   text-align: center;
 }
 
 .login-toggle span {
   font-weight: 600;
-  color: #1774cc;
+  color: var(--accent-2);
   cursor: pointer;
   transition: color 0.3s;
 }
 
 .login-toggle span:hover {
-  color: #1f87e8;
+  color: var(--accent-1);
   text-decoration: underline;
 }
 
@@ -207,7 +206,7 @@
   margin-top: 14px;
   font-size: 12px;
   letter-spacing: 0.02em;
-  color: rgba(31, 45, 72, 0.48);
+  color: var(--text-muted);
   text-align: center;
 }
 
