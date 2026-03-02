@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ensureUserProfile,
   isDesignPreviewMode,
@@ -432,6 +432,7 @@ const AppContextProvider = (props) => {
 
     let pollingId;
     let isActive = true;
+    let isRealtimeSubscribed = false;
 
     const buildChatData = async (rawChatsData) => {
       const chatsData = Array.isArray(rawChatsData) ? rawChatsData : [];
@@ -509,7 +510,11 @@ const AppContextProvider = (props) => {
     };
 
     void fetchChats();
-    pollingId = setInterval(fetchChats, 5000);
+    pollingId = setInterval(() => {
+      if (!isRealtimeSubscribed) {
+        void fetchChats();
+      }
+    }, 8000);
 
     const channel = supabase
       .channel(`chats_${userData.id}`)
@@ -525,7 +530,9 @@ const AppContextProvider = (props) => {
           await buildChatData(payload?.new?.chats_data);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        isRealtimeSubscribed = status === "SUBSCRIBED";
+      });
 
     return () => {
       isActive = false;
@@ -725,7 +732,7 @@ const AppContextProvider = (props) => {
     };
   }, [userData]);
 
-  const value = {
+  const value = useMemo(() => ({
     userData,
     setUserData,
     chatData,
@@ -745,7 +752,20 @@ const AppContextProvider = (props) => {
     isUserOnline,
     updateCurrentUserPreferences,
     clearAppState,
-  };
+  }), [
+    userData,
+    chatData,
+    loadUserData,
+    messages,
+    messagesId,
+    chatUser,
+    chatVisible,
+    chatInfoPanelOpen,
+    initiateCall,
+    isUserOnline,
+    updateCurrentUserPreferences,
+    clearAppState,
+  ]);
 
   return (
     <AppContext.Provider value={value}>{props.children}</AppContext.Provider>

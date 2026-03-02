@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import "./LeftSidebar.css";
 import assets from "../../assets/assets";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -29,6 +29,8 @@ const LeftSidebar = () => {
   const [user, setUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const searchDebounceRef = useRef(null);
+  const latestSearchTokenRef = useRef(0);
 
   const getPeerId = (item) =>
     String(
@@ -93,6 +95,11 @@ const LeftSidebar = () => {
       const input = e.target.value;
       setSearchTerm(input);
 
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = null;
+      }
+
       if (isDesignPreviewMode) {
         setShowSearch(false);
         setUser(null);
@@ -105,30 +112,57 @@ const LeftSidebar = () => {
         return;
       }
 
-      setShowSearch(true);
-
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .or(`username.ilike.%${input}%,name.ilike.%${input}%`)
-        .limit(10);
-
-      if (error || !data?.length) {
+      const trimmedInput = input.trim();
+      if (trimmedInput.length < 2) {
+        setShowSearch(false);
         setUser(null);
         return;
       }
 
-      // show the first user who is not me and not already in chats
-      const candidate = data.find(
-        (item) =>
-          item.id !== userData.id &&
-          !chatData.some((chat) => getPeerId(chat) === item.id),
-      );
-      setUser(candidate || null);
+      setShowSearch(true);
+
+      const token = Date.now();
+      latestSearchTokenRef.current = token;
+
+      searchDebounceRef.current = setTimeout(async () => {
+        try {
+          const { data, error } = await supabase
+            .from("users")
+            .select("*")
+            .or(`username.ilike.%${trimmedInput}%,name.ilike.%${trimmedInput}%`)
+            .limit(10);
+
+          if (latestSearchTokenRef.current !== token) return;
+
+          if (error || !data?.length) {
+            setUser(null);
+            return;
+          }
+
+          const candidate = data.find(
+            (item) =>
+              item.id !== userData.id &&
+              !chatData.some((chat) => getPeerId(chat) === item.id),
+          );
+          setUser(candidate || null);
+        } catch (error) {
+          if (latestSearchTokenRef.current === token) {
+            notificationHelper.error(toUserErrorMessage(error));
+          }
+        }
+      }, 300);
     } catch (error) {
       notificationHelper.error(toUserErrorMessage(error));
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
 
   // ─── Add new chat ─────────────────────────────────────────────────────────
   const addChat = async () => {

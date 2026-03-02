@@ -53,6 +53,8 @@ const ChatBox = () => {
   const messageInputRef = useRef(null);
   const chatMessagesRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const typingSendChannelRef = useRef(null);
+  const typingSendChannelReadyRef = useRef(false);
   const isTypingRef = useRef(false);
   const shouldAutoScrollRef = useRef(true);
   const prevActiveMessageIdRef = useRef("");
@@ -233,14 +235,9 @@ const ChatBox = () => {
     if (!activeMessageId || !userData?.id || !chatUser?.rId) return;
     if (!shouldBroadcastTyping) return;
 
-    const channelName = `typing_${activeMessageId}`;
-    const channel = supabase.channel(channelName, {
-      config: {
-        broadcast: { self: false },
-      },
-    });
+    const channel = typingSendChannelRef.current;
+    if (!channel || !typingSendChannelReadyRef.current) return;
 
-    await channel.subscribe();
     await channel.send({
       type: "broadcast",
       event: "TYPING",
@@ -251,8 +248,33 @@ const ChatBox = () => {
         isTyping,
       },
     });
-    await supabase.removeChannel(channel);
   }, [activeMessageId, chatUser?.rId, shouldBroadcastTyping, userData?.id]);
+
+  useEffect(() => {
+    if (isDesignPreviewMode || !activeMessageId || !userData?.id || !chatUser?.rId) {
+      typingSendChannelReadyRef.current = false;
+      typingSendChannelRef.current = null;
+      return;
+    }
+
+    const channel = supabase
+      .channel(`typing_send_${activeMessageId}_${userData.id}`, {
+        config: {
+          broadcast: { self: false },
+        },
+      })
+      .subscribe((status) => {
+        typingSendChannelReadyRef.current = status === "SUBSCRIBED";
+      });
+
+    typingSendChannelRef.current = channel;
+
+    return () => {
+      typingSendChannelReadyRef.current = false;
+      typingSendChannelRef.current = null;
+      void supabase.removeChannel(channel);
+    };
+  }, [activeMessageId, chatUser?.rId, userData?.id]);
 
   useEffect(() => {
     if (isDesignPreviewMode || !activeMessageId || !userData?.id || !chatUser?.rId) {
@@ -518,6 +540,7 @@ const ChatBox = () => {
 
     let isActive = true;
     let pollingId;
+    let isRealtimeSubscribed = false;
 
     const syncMessages = async () => {
       try {
@@ -531,7 +554,11 @@ const ChatBox = () => {
     };
 
     void syncMessages();
-    pollingId = setInterval(syncMessages, 3000);
+    pollingId = setInterval(() => {
+      if (!isRealtimeSubscribed) {
+        void syncMessages();
+      }
+    }, 6000);
 
     const channel = supabase
       .channel(`messages_${activeMessageId}`)
@@ -553,7 +580,9 @@ const ChatBox = () => {
           }
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        isRealtimeSubscribed = status === "SUBSCRIBED";
+      });
 
     return () => {
       isActive = false;

@@ -102,21 +102,23 @@
 }
 
 .password-input-wrap .form-input {
-  padding-left: 46px;
+  padding-right: 66px;
 }
 
 .password-toggle {
   position: absolute;
-  left: 12px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   border: none;
   background: transparent;
   color: var(--text-muted);
-  font-size: 15px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   line-height: 1;
   cursor: pointer;
-  padding: 0;
+  padding: 2px 0;
 }
 
 .password-toggle:hover {

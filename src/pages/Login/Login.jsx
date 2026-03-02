@@ -129,7 +129,7 @@ const Login = () => {
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 disabled={isSubmitting}
               >
-                {showPassword ? "🙈" : "👁️"}
+                {showPassword ? "Hide" : "Show"}
               </button>
               <input
                 onChange={(e) => setPassword(e.target.value)}
