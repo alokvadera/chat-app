@@ -85,6 +85,8 @@
 }
 
 .form-input {
+  width: 100%;
+  box-sizing: border-box;
   padding: 14px 14px;
   background: var(--surface-1);
   border: 1px solid var(--panel-border);
@@ -99,10 +101,13 @@
 
 .password-input-wrap {
   position: relative;
+  width: 100%;
 }
 
 .password-input-wrap .form-input {
-  padding-right: 52px;
+  min-height: 52px;
+  padding-right: 50px;
+  font-size: 15px;
 }
 
 .password-toggle {
