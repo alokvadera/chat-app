@@ -102,7 +102,7 @@
 }
 
 .password-input-wrap .form-input {
-  padding-right: 66px;
+  padding-right: 52px;
 }
 
 .password-toggle {
@@ -113,12 +113,19 @@
   border: none;
   background: transparent;
   color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  width: 24px;
+  height: 24px;
   line-height: 1;
   cursor: pointer;
-  padding: 2px 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
 }
 
 .password-toggle:hover {
@@ -149,7 +156,7 @@
   transition: background-color 5000s ease-in-out 0s;
 }
 
-.login-form button {
+.login-form > button {
   padding: 14px;
   background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
   color: white;
@@ -162,11 +169,11 @@
   box-shadow: 0 8px 24px rgba(0, 119, 255, 0.45);
 }
 
-.login-form button:hover {
+.login-form > button:hover {
   transform: translateY(-1px) scale(1.01);
 }
 
-.login-form button:disabled {
+.login-form > button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;

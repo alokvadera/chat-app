@@ -129,7 +129,48 @@ const Login = () => {
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 disabled={isSubmitting}
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? (
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M3 3L21 21"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M10.58 10.58A2 2 0 0013.42 13.42"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M9.88 5.09A9.76 9.76 0 0112 4.8c4.8 0 8.27 3.16 9.5 7.2a10.68 10.68 0 01-3.05 4.66"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M6.61 6.61A10.73 10.73 0 002.5 12c1.23 4.04 4.7 7.2 9.5 7.2 1.79 0 3.37-.44 4.73-1.17"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M2.5 12C3.73 7.96 7.2 4.8 12 4.8s8.27 3.16 9.5 7.2c-1.23 4.04-4.7 7.2-9.5 7.2S3.73 16.04 2.5 12z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+                  </svg>
+                )}
               </button>
               <input
                 onChange={(e) => setPassword(e.target.value)}
