@@ -93,8 +93,16 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
     const callType = options?.callType === "audio" ? "audio" : "video";
 
     let kitToken = "";
+    const tokenEndpoint = String(import.meta.env.VITE_ZEGO_TOKEN_ENDPOINT || "").trim();
+
     try {
-      const response = await fetch("/api/zego-token", {
+      if (!tokenEndpoint) {
+        throw new Error(
+          "VITE_ZEGO_TOKEN_ENDPOINT is not configured. Please set it to the API Gateway URL that proxies /zego-token.",
+        );
+      }
+
+      const response = await fetch(tokenEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -102,25 +110,25 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
         body: JSON.stringify({ roomID, userID, userName }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+      let data = null;
+
+      if (contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(
+          `ZEGO token endpoint returned unexpected response (${response.status}): ${text}`,
+        );
+      }
+
       if (!response.ok || !data?.token) {
         throw new Error(data?.error || "Unable to fetch ZEGO token from server.");
       }
 
       kitToken = String(data.token);
     } catch (error) {
-      const serverSecret = String(import.meta.env.VITE_ZEGO_SERVER_SECRET || "").trim();
-      if (import.meta.env.DEV && serverSecret) {
-        kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-          appID,
-          serverSecret,
-          roomID,
-          userID,
-          userName,
-        );
-      } else {
-        throw error;
-      }
+      throw new Error(`Failed to fetch ZEGO token: ${error?.message || "unknown error"}`);
     }
 
     const root = ensureZegoRoot();
