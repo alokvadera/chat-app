@@ -29,6 +29,9 @@ const EMOJI_OPTIONS = [
   "😴",
 ];
 
+const TYPING_INDICATOR_TIMEOUT_MS = 2000;
+const TYPING_SIGNAL_DEBOUNCE_MS = 250;
+
 const ChatBox = () => {
   const {
     userData,
@@ -53,6 +56,7 @@ const ChatBox = () => {
   const messageInputRef = useRef(null);
   const chatMessagesRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const typingDebounceRef = useRef(null);
   const typingSendChannelRef = useRef(null);
   const typingSendChannelReadyRef = useRef(false);
   const isTypingRef = useRef(false);
@@ -307,12 +311,16 @@ const ChatBox = () => {
         if (nextTyping) {
           typingTimeoutRef.current = setTimeout(() => {
             setIsPeerTyping(false);
-          }, 2500);
+          }, TYPING_INDICATOR_TIMEOUT_MS);
         }
       })
       .subscribe();
 
     return () => {
+      if (typingDebounceRef.current) {
+        clearTimeout(typingDebounceRef.current);
+        typingDebounceRef.current = null;
+      }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
@@ -327,11 +335,34 @@ const ChatBox = () => {
       isTypingRef.current = false;
       void sendTypingSignal(false);
     }
+    if (typingDebounceRef.current) {
+      clearTimeout(typingDebounceRef.current);
+      typingDebounceRef.current = null;
+    }
   }, [sendTypingSignal]);
 
   const openImagePicker = () => {
     imageInputRef.current?.click();
   };
+
+  const queueTypingSignal = useCallback((nextIsTyping) => {
+    if (!shouldBroadcastTyping) return;
+
+    if (typingDebounceRef.current) {
+      clearTimeout(typingDebounceRef.current);
+      typingDebounceRef.current = null;
+    }
+
+    if (!nextIsTyping) {
+      void sendTypingSignal(false);
+      return;
+    }
+
+    typingDebounceRef.current = setTimeout(() => {
+      typingDebounceRef.current = null;
+      void sendTypingSignal(true);
+    }, TYPING_SIGNAL_DEBOUNCE_MS);
+  }, [sendTypingSignal, shouldBroadcastTyping]);
 
   const onSelectEmoji = (emoji) => {
     setInput((prev) => `${prev}${emoji}`);
@@ -746,6 +777,19 @@ const ChatBox = () => {
             </div>
           );
         })}
+        {isPeerTyping ? (
+          <div className="typing-indicator-row">
+            <img className="message-avatar" src={chatUserAvatar} alt="" />
+            <div className="message-stack typing-stack">
+              <div className="typing-bubble">
+                <span />
+                <span />
+                <span />
+              </div>
+              <p className="message-time">{chatUser?.userData?.name || "User"} is typing...</p>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="chat-input">
@@ -772,7 +816,7 @@ const ChatBox = () => {
               const nextIsTyping = nextValue.trim().length > 0;
               if (nextIsTyping !== isTypingRef.current) {
                 isTypingRef.current = nextIsTyping;
-                void sendTypingSignal(nextIsTyping);
+                queueTypingSignal(nextIsTyping);
               }
             }}
             value={input}
@@ -781,7 +825,7 @@ const ChatBox = () => {
             onBlur={() => {
               if (!isTypingRef.current) return;
               isTypingRef.current = false;
-              void sendTypingSignal(false);
+              queueTypingSignal(false);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
