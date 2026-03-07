@@ -30,7 +30,7 @@ const EMOJI_OPTIONS = [
 ];
 
 const TYPING_INDICATOR_TIMEOUT_MS = 2000;
-const TYPING_SIGNAL_DEBOUNCE_MS = 250;
+const TYPING_SIGNAL_DEBOUNCE_MS = 300;
 
 const ChatBox = () => {
   const {
@@ -49,17 +49,18 @@ const ChatBox = () => {
 
   const [input, setInput] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isPeerTyping, setIsPeerTyping] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
   const imageInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const emojiButtonRef = useRef(null);
   const messageInputRef = useRef(null);
   const chatMessagesRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
+  const typingTimersRef = useRef(new Map());
   const typingDebounceRef = useRef(null);
-  const typingSendChannelRef = useRef(null);
-  const typingSendChannelReadyRef = useRef(false);
+  const roomChannelRef = useRef(null);
+  const roomChannelReadyRef = useRef(false);
   const isTypingRef = useRef(false);
+  const messagesRef = useRef([]);
   const shouldAutoScrollRef = useRef(true);
   const prevActiveMessageIdRef = useRef("");
   const prevMessageCountRef = useRef(0);
@@ -90,6 +91,29 @@ const ChatBox = () => {
     return remaining <= threshold;
   }, []);
 
+  const normalizeMessages = useCallback((items = []) => {
+    const seen = new Set();
+
+    return [...items]
+      .filter((item) => {
+        const signature = JSON.stringify([
+          item?.sId || "",
+          item?.text || "",
+          item?.image || "",
+          item?.createdAt || "",
+        ]);
+
+        if (seen.has(signature)) return false;
+        seen.add(signature);
+        return true;
+      })
+      .sort((left, right) => {
+        const leftTime = Date.parse(left?.createdAt || "") || 0;
+        const rightTime = Date.parse(right?.createdAt || "") || 0;
+        return leftTime - rightTime;
+      });
+  }, []);
+
   const areMessagesEqual = useCallback((left = [], right = []) => {
     if (left.length !== right.length) return false;
     for (let index = 0; index < left.length; index += 1) {
@@ -108,14 +132,14 @@ const ChatBox = () => {
   }, []);
 
   const updateMessagesIfChanged = useCallback((nextMessages) => {
-    const normalizedNext = [...toMessagesArray(nextMessages)];
+    const normalizedNext = normalizeMessages(toMessagesArray(nextMessages));
     setMessages((prev) => {
-      const prevNormalized = toMessagesArray(prev);
+      const prevNormalized = normalizeMessages(toMessagesArray(prev));
       return areMessagesEqual(prevNormalized, normalizedNext)
         ? prev
         : normalizedNext;
     });
-  }, [areMessagesEqual, setMessages]);
+  }, [areMessagesEqual, normalizeMessages, setMessages]);
 
   const chatMessagesId = getMessageId(chatUser);
   const activeMessageId = String(messagesId || chatMessagesId || "").trim();
@@ -128,6 +152,11 @@ const ChatBox = () => {
   const currentUserVisible = currentUserVisibility !== "private";
   const peerAllowsAudioCalls = chatUser?.userData?.allow_audio_calls !== false;
   const peerAllowsVideoCalls = chatUser?.userData?.allow_video_calls !== false;
+  const typingIndicatorLabel = useMemo(() => {
+    if (!typingUsers.length) return "";
+    if (typingUsers.length === 1) return `${typingUsers[0].userName} is typing...`;
+    return `${typingUsers.map((item) => item.userName).join(", ")} are typing...`;
+  }, [typingUsers]);
 
   const formatMessageDateLabel = useCallback((dateValue) => {
     const parsed = new Date(dateValue || Date.now());
@@ -216,6 +245,10 @@ const ChatBox = () => {
   }, [showEmojiPicker]);
 
   useEffect(() => {
+    messagesRef.current = normalizeMessages(messages);
+  }, [messages, normalizeMessages]);
+
+  useEffect(() => {
     const chatChanged = prevActiveMessageIdRef.current !== activeMessageId;
     const nextCount = messages.length;
     const listGrew = nextCount > prevMessageCountRef.current;
@@ -239,96 +272,20 @@ const ChatBox = () => {
     if (!activeMessageId || !userData?.id || !chatUser?.rId) return;
     if (!shouldBroadcastTyping) return;
 
-    const channel = typingSendChannelRef.current;
-    if (!channel || !typingSendChannelReadyRef.current) return;
+    const channel = roomChannelRef.current;
+    if (!channel || !roomChannelReadyRef.current) return;
 
     await channel.send({
       type: "broadcast",
-      event: "TYPING",
+      event: "typing",
       payload: {
-        messageId: activeMessageId,
-        senderId: userData.id,
-        targetId: chatUser.rId,
+        roomId: activeMessageId,
+        userId: userData.id,
+        userName: userData?.name || userData?.username || "User",
         isTyping,
       },
     });
-  }, [activeMessageId, chatUser?.rId, shouldBroadcastTyping, userData?.id]);
-
-  useEffect(() => {
-    if (isDesignPreviewMode || !activeMessageId || !userData?.id || !chatUser?.rId) {
-      typingSendChannelReadyRef.current = false;
-      typingSendChannelRef.current = null;
-      return;
-    }
-
-    const channel = supabase
-      .channel(`typing_send_${activeMessageId}_${userData.id}`, {
-        config: {
-          broadcast: { self: false },
-        },
-      })
-      .subscribe((status) => {
-        typingSendChannelReadyRef.current = status === "SUBSCRIBED";
-      });
-
-    typingSendChannelRef.current = channel;
-
-    return () => {
-      typingSendChannelReadyRef.current = false;
-      typingSendChannelRef.current = null;
-      void supabase.removeChannel(channel);
-    };
-  }, [activeMessageId, chatUser?.rId, userData?.id]);
-
-  useEffect(() => {
-    if (isDesignPreviewMode || !activeMessageId || !userData?.id || !chatUser?.rId) {
-      setIsPeerTyping(false);
-      return undefined;
-    }
-
-    setIsPeerTyping(false);
-    const channel = supabase
-      .channel(`typing_${activeMessageId}`, {
-        config: {
-          broadcast: { self: false },
-        },
-      })
-      .on("broadcast", { event: "TYPING" }, ({ payload }) => {
-        if (!payload) return;
-        const senderId = String(payload.senderId || "").trim();
-        const targetId = String(payload.targetId || "").trim();
-        if (senderId !== String(chatUser.rId || "").trim()) return;
-        if (targetId && targetId !== String(userData.id || "").trim()) return;
-
-        const nextTyping = Boolean(payload.isTyping);
-        setIsPeerTyping(nextTyping && peerTypingEnabled && peerVisible);
-
-        if (typingTimeoutRef.current) {
-          clearTimeout(typingTimeoutRef.current);
-          typingTimeoutRef.current = null;
-        }
-
-        if (nextTyping) {
-          typingTimeoutRef.current = setTimeout(() => {
-            setIsPeerTyping(false);
-          }, TYPING_INDICATOR_TIMEOUT_MS);
-        }
-      })
-      .subscribe();
-
-    return () => {
-      if (typingDebounceRef.current) {
-        clearTimeout(typingDebounceRef.current);
-        typingDebounceRef.current = null;
-      }
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
-      }
-      void supabase.removeChannel(channel);
-      setIsPeerTyping(false);
-    };
-  }, [activeMessageId, chatUser?.rId, peerTypingEnabled, peerVisible, userData?.id]);
+  }, [activeMessageId, chatUser?.rId, shouldBroadcastTyping, userData?.id, userData?.name, userData?.username]);
 
   useEffect(() => () => {
     if (isTypingRef.current) {
@@ -339,6 +296,8 @@ const ChatBox = () => {
       clearTimeout(typingDebounceRef.current);
       typingDebounceRef.current = null;
     }
+    typingTimersRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+    typingTimersRef.current.clear();
   }, [sendTypingSignal]);
 
   const openImagePicker = () => {
@@ -363,6 +322,43 @@ const ChatBox = () => {
       void sendTypingSignal(true);
     }, TYPING_SIGNAL_DEBOUNCE_MS);
   }, [sendTypingSignal, shouldBroadcastTyping]);
+
+  const applyTypingState = useCallback((payload) => {
+    if (!payload) return;
+    console.log("typing event received", payload);
+
+    const eventRoomId = String(payload.roomId || "").trim();
+    const eventUserId = String(payload.userId || "").trim();
+
+    if (!eventRoomId || eventRoomId !== activeMessageId) return;
+    if (!eventUserId || eventUserId === String(userData?.id || "").trim()) return;
+    if (!peerTypingEnabled || !peerVisible) return;
+
+    const existingTimer = typingTimersRef.current.get(eventUserId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      typingTimersRef.current.delete(eventUserId);
+    }
+
+    if (!payload.isTyping) {
+      setTypingUsers((prev) => prev.filter((item) => item.userId !== eventUserId));
+      return;
+    }
+
+    const nextUserName = String(payload.userName || chatUser?.userData?.name || "User").trim();
+    setTypingUsers((prev) => {
+      const next = prev.filter((item) => item.userId !== eventUserId);
+      next.push({ userId: eventUserId, userName: nextUserName });
+      return next;
+    });
+
+    const timeoutId = setTimeout(() => {
+      typingTimersRef.current.delete(eventUserId);
+      setTypingUsers((prev) => prev.filter((item) => item.userId !== eventUserId));
+    }, TYPING_INDICATOR_TIMEOUT_MS);
+
+    typingTimersRef.current.set(eventUserId, timeoutId);
+  }, [activeMessageId, chatUser?.userData?.name, peerTypingEnabled, peerVisible, userData?.id]);
 
   const onSelectEmoji = (emoji) => {
     setInput((prev) => `${prev}${emoji}`);
@@ -468,16 +464,27 @@ const ChatBox = () => {
         return;
       }
 
-      const currentRow = await getOrCreateMessageRow();
+      const optimisticMessage = {
+        sId: userData.id,
+        text: messageText,
+        createdAt: new Date().toISOString(),
+      };
 
-      const updatedMessages = [
+      const optimisticMessages = normalizeMessages([
+        ...toMessagesArray(messagesRef.current),
+        optimisticMessage,
+      ]);
+
+      shouldAutoScrollRef.current = true;
+      updateMessagesIfChanged(optimisticMessages);
+      setInput("");
+      setShowEmojiPicker(false);
+
+      const currentRow = await getOrCreateMessageRow();
+      const updatedMessages = normalizeMessages([
         ...toMessagesArray(currentRow?.messages),
-        {
-          sId: userData.id,
-          text: messageText,
-          createdAt: new Date().toISOString(),
-        },
-      ];
+        ...optimisticMessages,
+      ]);
 
       const { error: updateError } = await supabase
         .from("messages")
@@ -485,13 +492,9 @@ const ChatBox = () => {
         .eq("id", activeMessageId);
       if (updateError) throw updateError;
 
-      shouldAutoScrollRef.current = true;
-      setMessages([...(updatedMessages || [])]);
-
       await updateChatsData(messageText.slice(0, 30));
-      setInput("");
-      setShowEmojiPicker(false);
     } catch (error) {
+      updateMessagesIfChanged(messagesRef.current);
       notificationHelper.error(toUserErrorMessage(error));
     }
   };
@@ -515,19 +518,33 @@ const ChatBox = () => {
         return;
       }
 
+      const localUrl = URL.createObjectURL(file);
+      const optimisticMessage = {
+        sId: userData.id,
+        image: localUrl,
+        createdAt: new Date().toISOString(),
+      };
+      const optimisticMessages = normalizeMessages([
+        ...toMessagesArray(messagesRef.current),
+        optimisticMessage,
+      ]);
+
+      shouldAutoScrollRef.current = true;
+      updateMessagesIfChanged(optimisticMessages);
+
       const fileUrl = await upload(file);
       if (!fileUrl || !activeMessageId) return;
 
       const currentRow = await getOrCreateMessageRow();
-
-      const updatedMessages = [
+      const persistedMessage = {
+        ...optimisticMessage,
+        image: fileUrl,
+      };
+      const updatedMessages = normalizeMessages([
         ...toMessagesArray(currentRow?.messages),
-        {
-          sId: userData.id,
-          image: fileUrl,
-          createdAt: new Date().toISOString(),
-        },
-      ];
+        ...toMessagesArray(messagesRef.current).filter((msg) => msg.image !== localUrl),
+        persistedMessage,
+      ]);
 
       const { error: updateError } = await supabase
         .from("messages")
@@ -535,11 +552,9 @@ const ChatBox = () => {
         .eq("id", activeMessageId);
       if (updateError) throw updateError;
 
-      shouldAutoScrollRef.current = true;
-      setMessages([...(updatedMessages || [])]);
-
       await updateChatsData("image");
     } catch (error) {
+      updateMessagesIfChanged(messagesRef.current);
       notificationHelper.error(toUserErrorMessage(error));
     } finally {
       e.target.value = "";
@@ -564,14 +579,15 @@ const ChatBox = () => {
 
     if (!activeMessageId) {
       setMessages([]);
+      setTypingUsers([]);
+      roomChannelRef.current = null;
+      roomChannelReadyRef.current = false;
       prevActiveMessageIdRef.current = "";
       prevMessageCountRef.current = 0;
       return;
     }
 
     let isActive = true;
-    let pollingId;
-    let isRealtimeSubscribed = false;
 
     const syncMessages = async () => {
       try {
@@ -585,42 +601,50 @@ const ChatBox = () => {
     };
 
     void syncMessages();
-    pollingId = setInterval(() => {
-      if (!isRealtimeSubscribed) {
-        void syncMessages();
-      }
-    }, 6000);
 
     const channel = supabase
-      .channel(`messages_${activeMessageId}`)
+      .channel(`room-${activeMessageId}`, {
+        config: {
+          broadcast: { self: false },
+        },
+      })
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "UPDATE",
           schema: "public",
           table: "messages",
           filter: `id=eq.${activeMessageId}`,
         },
         (payload) => {
+          console.log("message received", payload);
           if (!isActive) return;
           const nextMessages = payload?.new?.messages;
           if (Array.isArray(nextMessages)) {
             updateMessagesIfChanged(nextMessages);
-          } else {
-            void syncMessages();
           }
         },
       )
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (!isActive) return;
+        applyTypingState(payload);
+      })
       .subscribe((status) => {
-        isRealtimeSubscribed = status === "SUBSCRIBED";
+        roomChannelReadyRef.current = status === "SUBSCRIBED";
       });
+
+    roomChannelRef.current = channel;
 
     return () => {
       isActive = false;
-      clearInterval(pollingId);
+      roomChannelReadyRef.current = false;
+      roomChannelRef.current = null;
+      typingTimersRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+      typingTimersRef.current.clear();
+      setTypingUsers([]);
       supabase.removeChannel(channel);
     };
-  }, [activeMessageId, setMessages, getOrCreateMessageRow, updateMessagesIfChanged]);
+  }, [activeMessageId, applyTypingState, getOrCreateMessageRow, isDesignPreviewMode, setMessages, updateMessagesIfChanged]);
 
   const isOnline = isUserOnline(chatUser?.userData);
 
@@ -649,7 +673,7 @@ const ChatBox = () => {
         <div className="chat-user-meta">
           <p>{chatUser.userData.name}</p>
           <span className={`presence ${isOnline ? "online" : "away"}`}>
-            {isPeerTyping ? "Typing..." : isOnline ? "Online" : "Offline"}
+            {typingUsers.length ? "Typing..." : isOnline ? "Online" : "Offline"}
           </span>
         </div>
         <div className="chat-user-actions">
@@ -777,7 +801,7 @@ const ChatBox = () => {
             </div>
           );
         })}
-        {isPeerTyping ? (
+        {typingUsers.length ? (
           <div className="typing-indicator-row">
             <img className="message-avatar" src={chatUserAvatar} alt="" />
             <div className="message-stack typing-stack">
@@ -786,7 +810,7 @@ const ChatBox = () => {
                 <span />
                 <span />
               </div>
-              <p className="message-time">{chatUser?.userData?.name || "User"} is typing...</p>
+              <p className="message-time">{typingIndicatorLabel}</p>
             </div>
           </div>
         ) : null}
