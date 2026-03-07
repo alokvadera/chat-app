@@ -838,9 +838,12 @@ const ChatBox = () => {
               if (!shouldBroadcastTyping) return;
 
               const nextIsTyping = nextValue.trim().length > 0;
-              if (nextIsTyping !== isTypingRef.current) {
-                isTypingRef.current = nextIsTyping;
-                queueTypingSignal(nextIsTyping);
+              if (nextIsTyping) {
+                isTypingRef.current = true;
+                queueTypingSignal(true);
+              } else if (isTypingRef.current) {
+                isTypingRef.current = false;
+                queueTypingSignal(false);
               }
             }}
             value={input}
