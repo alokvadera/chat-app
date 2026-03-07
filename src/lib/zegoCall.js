@@ -6,7 +6,7 @@ let moduleZegoPromise = null;
 const isValidZegoSdk = (candidate) =>
   !!candidate &&
   typeof candidate.create === "function" &&
-  typeof candidate.generateKitTokenForTest === "function";
+  typeof candidate.generateKitTokenForProduction === "function";
 
 const normalizeZegoSdk = (source) => {
   const candidates = [
@@ -61,12 +61,8 @@ const resolveZegoSdk = async () => {
   const moduleSdk = await waitForModuleZegoSdk();
   if (moduleSdk) return moduleSdk;
 
-  try {
-    const globalSdk = await waitForGlobalZegoSdk();
-    if (globalSdk) return globalSdk;
-  } catch {
-    // no-op
-  }
+  const globalSdk = await waitForGlobalZegoSdk();
+  if (globalSdk) return globalSdk;
 
   throw new Error("Zego SDK unavailable. Module import failed.");
 };
@@ -126,7 +122,16 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
         throw new Error(data?.error || "Unable to fetch ZEGO token from server.");
       }
 
-      kitToken = String(data.token);
+      const serverToken = String(data.token);
+
+      // 🔥 FIX: Convert server token → kit token so CloudFront serves a signed session.
+      kitToken = ZegoUIKitPrebuilt.generateKitTokenForProduction(
+        appID,
+        serverToken,
+        roomID,
+        userID,
+        userName
+      );
     } catch (error) {
       throw new Error(`Failed to fetch ZEGO token: ${error?.message || "unknown error"}`);
     }
