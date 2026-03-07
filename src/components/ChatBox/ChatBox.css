@@ -73,8 +73,8 @@
   height: 34px;
   border: 1px solid rgba(140, 169, 214, 0.35);
   border-radius: 50%;
-  background: linear-gradient(145deg, rgba(38, 53, 81, 0.95), rgba(28, 40, 64, 0.95));
-  color: #ecf4ff;
+  background: var(--surface-1);
+  color: var(--text-primary);
   display: grid;
   place-items: center;
   font-size: 16px;
@@ -105,7 +105,7 @@
 }
 
 .icon-btn.info-btn {
-  background: linear-gradient(145deg, rgba(82, 82, 91, 0.95), rgba(63, 63, 70, 0.92));
+  background: var(--surface-1);
 }
 
 .chat-user .arrow {
@@ -206,7 +206,7 @@
 }
 
 .r-msg .msg {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(242, 246, 255, 0.92));
+  background: var(--inbound-msg);
   color: var(--text-primary);
   border-radius: 20px 20px 20px 6px;
   box-shadow: 0 10px 22px rgba(10, 22, 46, 0.08);
@@ -260,8 +260,8 @@
   gap: 10px;
   padding: 10px 12px;
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(17, 25, 45, 0.95), rgba(13, 20, 38, 0.98));
-  border: 1px solid rgba(95, 122, 177, 0.24);
+  background: var(--surface-1);
+  border: 1px solid var(--panel-border);
   box-shadow: 0 14px 28px rgba(2, 8, 20, 0.28);
 }
 
@@ -305,9 +305,9 @@
   width: 38px;
   height: 38px;
   border-radius: 14px;
-  border: 1px solid rgba(102, 131, 190, 0.24);
-  background: rgba(255, 255, 255, 0.04);
-  color: #dce9ff;
+  border: 1px solid var(--panel-border);
+  background: var(--surface-2);
+  color: var(--text-primary);
   display: grid;
   place-items: center;
   font-size: 17px;
@@ -317,9 +317,9 @@
 }
 
 .chat-input .input-icon:hover {
-  background: rgba(43, 121, 229, 0.18);
+  background: var(--surface-1);
   border-color: rgba(122, 179, 255, 0.42);
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .chat-input label.input-icon img {
