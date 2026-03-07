@@ -716,35 +716,32 @@ const ChatBox = () => {
           }
 
           const msg = item.msg;
+          const isSent = msg.sId === userData.id;
+          const messageAvatar = isSent ? currentUserAvatar : chatUserAvatar;
           return (
             <div
               key={item.key}
-              className={msg.sId === userData.id ? "s-msg" : "r-msg"}
+              className={`message-row ${isSent ? "s-msg" : "r-msg"}`}
             >
-              {msg.image ? (
-                <img
-                  className="msg-img"
-                  src={msg.image}
-                  alt=""
-                  onLoad={() => {
-                    if (shouldAutoScrollRef.current) {
-                      scrollToBottom();
-                    }
-                  }}
-                />
-              ) : (
-                <p className="msg">{msg.text}</p>
-              )}
-              <div>
-                <img
-                  src={
-                    msg.sId === userData.id
-                      ? currentUserAvatar
-                      : chatUserAvatar
-                  }
-                  alt=""
-                />
-                <p>{convertTimestamp(msg.createdAt)}</p>
+              {!isSent ? (
+                <img className="message-avatar" src={messageAvatar} alt="" />
+              ) : null}
+              <div className="message-stack">
+                {msg.image ? (
+                  <img
+                    className="msg-img"
+                    src={msg.image}
+                    alt=""
+                    onLoad={() => {
+                      if (shouldAutoScrollRef.current) {
+                        scrollToBottom();
+                      }
+                    }}
+                  />
+                ) : (
+                  <p className="msg">{msg.text}</p>
+                )}
+                <p className="message-time">{convertTimestamp(msg.createdAt)}</p>
               </div>
             </div>
           );
@@ -755,62 +752,73 @@ const ChatBox = () => {
         {!currentUserTypingEnabled ? (
           <span className="typing-disabled-hint">Typing indicators are off</span>
         ) : null}
-        <button
-          type="button"
-          className="input-icon"
-          onClick={openImagePicker}
-          title="Add image"
-        >
-          +
-        </button>
-        <input
-          ref={messageInputRef}
-          onChange={(e) => {
-            const nextValue = e.target.value;
-            setInput(nextValue);
+        <div className="chat-composer">
+          <button
+            type="button"
+            className="input-icon"
+            onClick={openImagePicker}
+            title="Add image"
+          >
+            +
+          </button>
+          <input
+            ref={messageInputRef}
+            onChange={(e) => {
+              const nextValue = e.target.value;
+              setInput(nextValue);
 
-            if (!shouldBroadcastTyping) return;
+              if (!shouldBroadcastTyping) return;
 
-            const nextIsTyping = nextValue.trim().length > 0;
-            if (nextIsTyping !== isTypingRef.current) {
-              isTypingRef.current = nextIsTyping;
-              void sendTypingSignal(nextIsTyping);
-            }
-          }}
-          value={input}
-          type="text"
-          placeholder="Send a message"
-          onBlur={() => {
-            if (!isTypingRef.current) return;
-            isTypingRef.current = false;
-            void sendTypingSignal(false);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              void sendMessage();
-            }
-          }}
-        />
-        <input
-          ref={imageInputRef}
-          onChange={sendImage}
-          type="file"
-          id="image"
-          accept="image/png, image/jpeg"
-          hidden
-        />
-        <label htmlFor="image" className="input-icon" title="Add image">
-          <img src={assets.gallery_icon} alt="" />
-        </label>
-        <button
-          ref={emojiButtonRef}
-          type="button"
-          className="input-icon"
-          onClick={() => setShowEmojiPicker((prev) => !prev)}
-          title="Emoji"
-        >
-          😊
-        </button>
+              const nextIsTyping = nextValue.trim().length > 0;
+              if (nextIsTyping !== isTypingRef.current) {
+                isTypingRef.current = nextIsTyping;
+                void sendTypingSignal(nextIsTyping);
+              }
+            }}
+            value={input}
+            type="text"
+            placeholder="Write a message"
+            onBlur={() => {
+              if (!isTypingRef.current) return;
+              isTypingRef.current = false;
+              void sendTypingSignal(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                void sendMessage();
+              }
+            }}
+          />
+          <input
+            ref={imageInputRef}
+            onChange={sendImage}
+            type="file"
+            id="image"
+            accept="image/png, image/jpeg"
+            hidden
+          />
+          <label htmlFor="image" className="input-icon" title="Add image">
+            <img src={assets.gallery_icon} alt="" />
+          </label>
+          <button
+            ref={emojiButtonRef}
+            type="button"
+            className="input-icon"
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            title="Emoji"
+          >
+            😊
+          </button>
+          <button
+            type="button"
+            className="send-btn"
+            onClick={sendMessage}
+            title="Send message"
+            aria-label="Send message"
+          >
+            <img src={assets.send_button} alt="" />
+          </button>
+        </div>
         {showEmojiPicker ? (
           <div className="emoji-picker" ref={emojiPickerRef}>
             {EMOJI_OPTIONS.map((emoji) => (
@@ -825,12 +833,6 @@ const ChatBox = () => {
             ))}
           </div>
         ) : null}
-        <img
-          onClick={sendMessage}
-          className="img"
-          src={assets.send_button}
-          alt=""
-        />
       </div>
     </div>
   ) : (
