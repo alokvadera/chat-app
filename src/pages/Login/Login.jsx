@@ -1,6 +1,6 @@
 import "./Login.css";
 import assets from "../../assets/assets";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   isDesignPreviewMode,
@@ -21,17 +21,31 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [knownAvatar, setKnownAvatar] = useState("");
+  const [passwordInputReady, setPasswordInputReady] = useState(false);
+  const emailInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
 
   useEffect(() => {
     const knownUser = getKnownUser();
     setKnownAvatar(knownUser?.avatar || "");
     setPassword("");
     setShowPassword(false);
+    setPasswordInputReady(false);
+
+    const clearAutofill = window.setTimeout(() => {
+      setEmail("");
+      setPassword("");
+      if (emailInputRef.current) emailInputRef.current.value = "";
+      if (passwordInputRef.current) passwordInputRef.current.value = "";
+    }, 50);
+
+    return () => window.clearTimeout(clearAutofill);
   }, []);
 
   useEffect(() => {
     setPassword("");
     setShowPassword(false);
+    setPasswordInputReady(false);
   }, [currState]);
 
   const onSubmitHandler = async (event) => {
@@ -75,6 +89,22 @@ const Login = () => {
     <div className="login">
       <div className="login-glass">
         <form onSubmit={onSubmitHandler} className="login-form" autoComplete="off">
+          <input
+            type="text"
+            name="username"
+            autoComplete="username"
+            className="login-decoy"
+            tabIndex="-1"
+            aria-hidden="true"
+          />
+          <input
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            className="login-decoy"
+            tabIndex="-1"
+            aria-hidden="true"
+          />
           <img
             src={knownAvatar || assets.avatar_icon}
             alt="Profile"
@@ -104,12 +134,14 @@ const Login = () => {
           <div className="input-group">
             <label>Email Address</label>
             <input
+              ref={emailInputRef}
               onChange={(e) => setEmail(e.target.value)}
               value={email}
               type="email"
-              placeholder="name@company.com"
+              placeholder=""
               className="form-input"
-              autoComplete="email"
+              name="chatapp-email"
+              autoComplete="off"
               spellCheck={false}
               autoCorrect="off"
               autoCapitalize="none"
@@ -180,13 +212,17 @@ const Login = () => {
                 )}
               </button>
               <input
+                ref={passwordInputRef}
                 onChange={(e) => setPassword(e.target.value)}
                 value={password}
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
+                placeholder=""
                 className="form-input"
                 name="chatapp-password"
-                autoComplete="new-password"
+                autoComplete="off"
+                readOnly={!passwordInputReady}
+                onFocus={() => setPasswordInputReady(true)}
+                onPointerDown={() => setPasswordInputReady(true)}
                 disabled={isSubmitting}
                 required
               />
