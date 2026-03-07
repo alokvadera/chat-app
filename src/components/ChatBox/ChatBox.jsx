@@ -30,7 +30,7 @@ const EMOJI_OPTIONS = [
 ];
 
 const TYPING_INDICATOR_TIMEOUT_MS = 2000;
-const TYPING_SIGNAL_DEBOUNCE_MS = 300;
+const TYPING_SIGNAL_THROTTLE_MS = 300;
 
 const ChatBox = () => {
   const {
@@ -56,10 +56,10 @@ const ChatBox = () => {
   const messageInputRef = useRef(null);
   const chatMessagesRef = useRef(null);
   const typingTimersRef = useRef(new Map());
-  const typingDebounceRef = useRef(null);
   const roomChannelRef = useRef(null);
   const roomChannelReadyRef = useRef(false);
   const isTypingRef = useRef(false);
+  const lastTypingEventRef = useRef(0);
   const messagesRef = useRef([]);
   const shouldAutoScrollRef = useRef(true);
   const prevActiveMessageIdRef = useRef("");
@@ -285,6 +285,7 @@ const ChatBox = () => {
         isTyping,
       },
     });
+    console.log("typing event sent", Date.now());
   }, [activeMessageId, chatUser?.rId, shouldBroadcastTyping, userData?.id, userData?.name, userData?.username]);
 
   useEffect(() => () => {
@@ -292,10 +293,7 @@ const ChatBox = () => {
       isTypingRef.current = false;
       void sendTypingSignal(false);
     }
-    if (typingDebounceRef.current) {
-      clearTimeout(typingDebounceRef.current);
-      typingDebounceRef.current = null;
-    }
+    lastTypingEventRef.current = 0;
     typingTimersRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
     typingTimersRef.current.clear();
   }, [sendTypingSignal]);
@@ -304,28 +302,28 @@ const ChatBox = () => {
     imageInputRef.current?.click();
   };
 
-  const queueTypingSignal = useCallback((nextIsTyping) => {
+  const handleTypingSignal = useCallback((nextIsTyping) => {
     if (!shouldBroadcastTyping) return;
 
-    if (typingDebounceRef.current) {
-      clearTimeout(typingDebounceRef.current);
-      typingDebounceRef.current = null;
-    }
-
     if (!nextIsTyping) {
+      lastTypingEventRef.current = 0;
       void sendTypingSignal(false);
       return;
     }
 
-    typingDebounceRef.current = setTimeout(() => {
-      typingDebounceRef.current = null;
+    const now = Date.now();
+    if (
+      lastTypingEventRef.current === 0 ||
+      now - lastTypingEventRef.current >= TYPING_SIGNAL_THROTTLE_MS
+    ) {
+      lastTypingEventRef.current = now;
       void sendTypingSignal(true);
-    }, TYPING_SIGNAL_DEBOUNCE_MS);
+    }
   }, [sendTypingSignal, shouldBroadcastTyping]);
 
   const applyTypingState = useCallback((payload) => {
     if (!payload) return;
-    console.log("typing event received", payload);
+    console.log("typing event received", Date.now(), payload);
 
     const eventRoomId = String(payload.roomId || "").trim();
     const eventUserId = String(payload.userId || "").trim();
@@ -840,10 +838,10 @@ const ChatBox = () => {
               const nextIsTyping = nextValue.trim().length > 0;
               if (nextIsTyping) {
                 isTypingRef.current = true;
-                queueTypingSignal(true);
+                handleTypingSignal(true);
               } else if (isTypingRef.current) {
                 isTypingRef.current = false;
-                queueTypingSignal(false);
+                handleTypingSignal(false);
               }
             }}
             value={input}
@@ -852,7 +850,7 @@ const ChatBox = () => {
             onBlur={() => {
               if (!isTypingRef.current) return;
               isTypingRef.current = false;
-              queueTypingSignal(false);
+              handleTypingSignal(false);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
