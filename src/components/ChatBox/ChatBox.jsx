@@ -803,12 +803,14 @@ const ChatBox = () => {
           <div className="typing-indicator-row">
             <img className="message-avatar" src={chatUserAvatar} alt="" />
             <div className="message-stack typing-stack">
-              <div className="typing-bubble">
-                <span />
-                <span />
-                <span />
+              <div className="typing-indicator">
+                <span className="typing-label">{typingIndicatorLabel.replace(/\.\.\.$/, "").trim()}</span>
+                <span className="typing-dots" aria-hidden="true">
+                  <span>.</span>
+                  <span>.</span>
+                  <span>.</span>
+                </span>
               </div>
-              <p className="message-time">{typingIndicatorLabel}</p>
             </div>
           </div>
         ) : null}
