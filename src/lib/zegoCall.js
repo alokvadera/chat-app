@@ -67,6 +67,8 @@ const resolveZegoSdk = async () => {
   throw new Error("Zego SDK unavailable. Module import failed.");
 };
 
+const isLikelyKitToken = (value = "") => value.startsWith("04") && value.includes("#");
+
 export const startVideoSession = async (roomID, user = {}, options = {}) => {
   try {
     if (typeof window === "undefined") {
@@ -122,28 +124,22 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
         throw new Error(data?.error || "Unable to fetch ZEGO token from server.");
       }
 
-      const serverToken = String(data.token);
-
-      // 🔥 FIX: Convert server token → kit token so CloudFront serves a signed session.
-      kitToken = ZegoUIKitPrebuilt.generateKitTokenForProduction(
-        appID,
-        serverToken,
-        roomID,
-        userID,
-        userName
-      );
+      kitToken = String(data.token || "").trim();
+      if (!isLikelyKitToken(kitToken)) {
+        throw new Error("ZEGO token endpoint returned an invalid kit token.");
+      }
     } catch (error) {
       throw new Error(`Failed to fetch ZEGO token: ${error?.message || "unknown error"}`);
     }
 
     const root = ensureZegoRoot();
-    root.innerHTML = "";
-    root.style.display = "block";
 
     if (activeZegoInstance?.destroy) {
       activeZegoInstance.destroy();
+      activeZegoInstance = null;
     }
 
+    root.style.display = "block";
     activeZegoInstance = ZegoUIKitPrebuilt.create(kitToken);
     activeZegoInstance.joinRoom({
       container: root,
@@ -155,8 +151,8 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
       turnOnCameraWhenJoining: callType !== "audio",
       showScreenSharingButton: false,
       onLeaveRoom: () => {
-        root.innerHTML = "";
         root.style.display = "none";
+        activeZegoInstance = null;
       },
     });
 
