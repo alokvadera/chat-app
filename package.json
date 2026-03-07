@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:frontend": "bash scripts/deploy-frontend.sh",
+    "deploy:lambda": "bash scripts/deploy-lambda.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0",

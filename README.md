@@ -6,58 +6,68 @@
 2. Create `.env` with:
    - `VITE_SUPABASE_URL=https://<project-ref>.supabase.co`
    - `VITE_SUPABASE_ANON_KEY=<anon-key>`
+   - `VITE_ZEGO_APP_ID=<zego-app-id>`
+   - `VITE_ZEGO_TOKEN_ENDPOINT=https://<api-id>.execute-api.<region>.amazonaws.com/prod/zego-token`
 3. Run:
    - `npm run dev`
 
-## Vercel deployment
-This repo includes [`vercel.json`](./vercel.json) with:
-1. Vite build config
-2. Output folder `dist`
-3. SPA rewrites for React Router
+## AWS deployment automation
+This repo includes:
+1. `scripts/deploy-frontend.sh` for S3 + CloudFront frontend deploys
+2. `scripts/deploy-lambda.sh` for the ZEGO token Lambda deploy
+3. `.github/workflows/deploy.yml` for automated deploys on push to `main`
 
-In Vercel project settings:
-1. Set `VITE_SUPABASE_URL`
-2. Set `VITE_SUPABASE_ANON_KEY`
-3. Set `VITE_ZEGO_APP_ID`
-4. Set server-only `ZEGO_APP_ID` (same numeric value)
-5. Set server-only `ZEGO_SERVER_SECRET`
-3. Redeploy with cache cleared when changing env vars
+### Required AWS resources
+1. S3 bucket for the Vite `dist/` output
+2. CloudFront distribution in front of that bucket
+3. Lambda function for `zego-token`
+4. API Gateway route connected to that Lambda
 
-## ZEGO secret safety (Vercel)
-Do NOT store ZEGO server secret in any `VITE_*` variable.
+### Required environment variables for local deploy
+1. `AWS_REGION`
+2. `S3_BUCKET_NAME`
+3. `CLOUDFRONT_DISTRIBUTION_ID`
+4. `LAMBDA_FUNCTION_NAME`
+5. `VITE_SUPABASE_URL`
+6. `VITE_SUPABASE_ANON_KEY`
+7. `VITE_ZEGO_APP_ID`
+8. `VITE_ZEGO_TOKEN_ENDPOINT`
+9. `ZEGO_APP_ID`
+10. `ZEGO_SERVER_SECRET`
+11. `CORS_ALLOW_ORIGIN` optional, recommended to set to your frontend domain
+
+### Manual deploy commands
+1. Deploy Lambda:
+   - `npm run deploy:lambda`
+2. Deploy frontend:
+   - `npm run deploy:frontend`
+
+### GitHub Actions secrets
+1. `AWS_ACCESS_KEY_ID`
+2. `AWS_SECRET_ACCESS_KEY`
+3. `AWS_REGION`
+4. `S3_BUCKET_NAME`
+5. `CLOUDFRONT_DISTRIBUTION_ID`
+6. `LAMBDA_FUNCTION_NAME`
+7. `VITE_SUPABASE_URL`
+8. `VITE_SUPABASE_ANON_KEY`
+9. `VITE_ZEGO_APP_ID`
+10. `VITE_ZEGO_TOKEN_ENDPOINT`
+11. `ZEGO_APP_ID`
+12. `ZEGO_SERVER_SECRET`
+13. `CORS_ALLOW_ORIGIN`
+
+### How the automation works
+1. `deploy:lambda` zips `lambda/zego-token/index.mjs`, updates Lambda code, then updates Lambda configuration
+2. `deploy:frontend` installs dependencies, runs the Vite build, syncs `dist/` to S3, then invalidates CloudFront
+
+## ZEGO secret safety
+Do not store `ZEGO_SERVER_SECRET` in any `VITE_*` variable.
 
 Use:
-1. `VITE_ZEGO_APP_ID` for frontend
-2. `ZEGO_APP_ID` + `ZEGO_SERVER_SECRET` for Vercel serverless function (`/api/zego-token`)
-
-The frontend now requests call tokens from `/api/zego-token`.
-
-## Render deployment (connected repository)
-This repo now includes [`render.yaml`](./render.yaml) for one-click setup on Render.
-
-### What Render will use
-1. Build command: `npm ci && npm run build`
-2. Publish directory: `dist`
-3. SPA rewrite: all routes (`/*`) -> `/index.html`
-
-### Steps
-1. In Render, click **New +** -> **Blueprint**.
-2. Select this GitHub repository.
-3. Confirm service from `render.yaml` and deploy.
-
-### Required environment variables (Render service)
-1. `VITE_SUPABASE_URL`
-2. `VITE_SUPABASE_ANON_KEY`
-
-After adding/changing env vars, trigger a **Manual Deploy**.
-
-### Important for Supabase auth
-In Supabase dashboard -> **Authentication -> URL Configuration**:
-1. Set `Site URL` to your Render production URL
-2. Add redirect URLs for:
-   - your Render production URL
-   - local: `http://localhost:5173`
-   - any preview URL you use
+1. `VITE_ZEGO_APP_ID` for the frontend
+2. `VITE_ZEGO_TOKEN_ENDPOINT` for the API Gateway endpoint
+3. `ZEGO_APP_ID` + `ZEGO_SERVER_SECRET` only in Lambda configuration
 
 ## Supabase auth checklist
 In Supabase project settings:
@@ -65,7 +75,6 @@ In Supabase project settings:
 2. Set `Site URL` to your production domain
 3. Add redirect URLs:
    - production domain
-   - vercel preview domain
    - `http://localhost:5173`
 
 ## If login/signup times out
