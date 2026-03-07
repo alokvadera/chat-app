@@ -25,7 +25,14 @@ const Login = () => {
   useEffect(() => {
     const knownUser = getKnownUser();
     setKnownAvatar(knownUser?.avatar || "");
+    setPassword("");
+    setShowPassword(false);
   }, []);
+
+  useEffect(() => {
+    setPassword("");
+    setShowPassword(false);
+  }, [currState]);
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
@@ -67,7 +74,7 @@ const Login = () => {
   return (
     <div className="login">
       <div className="login-glass">
-        <form onSubmit={onSubmitHandler} className="login-form">
+        <form onSubmit={onSubmitHandler} className="login-form" autoComplete="off">
           <img
             src={knownAvatar || assets.avatar_icon}
             alt="Profile"
@@ -178,7 +185,8 @@ const Login = () => {
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 className="form-input"
-                autoComplete={currState === "signup" ? "new-password" : "current-password"}
+                name="chatapp-password"
+                autoComplete="new-password"
                 disabled={isSubmitting}
                 required
               />
