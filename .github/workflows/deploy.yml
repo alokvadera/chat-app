@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
+      - dev
 
 jobs:
   deploy:
@@ -14,16 +14,10 @@ jobs:
 
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
-      S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
-      CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
-      LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       VITE_ZEGO_APP_ID: ${{ secrets.VITE_ZEGO_APP_ID }}
       VITE_ZEGO_TOKEN_ENDPOINT: ${{ secrets.VITE_ZEGO_TOKEN_ENDPOINT }}
-      ZEGO_APP_ID: ${{ secrets.ZEGO_APP_ID }}
-      ZEGO_SERVER_SECRET: ${{ secrets.ZEGO_SERVER_SECRET }}
-      CORS_ALLOW_ORIGIN: ${{ secrets.CORS_ALLOW_ORIGIN }}
 
     steps:
       - name: Checkout
@@ -42,8 +36,24 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy Lambda
-        run: npm run deploy:lambda
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Deploy Frontend
-        run: npm run deploy:frontend
+      - name: Build project
+        run: npm run build
+
+      - name: Deploy frontend to staging S3
+        if: github.ref == 'refs/heads/dev'
+        run: aws s3 sync dist/ s3://${{ secrets.STAGING_S3_BUCKET }} --delete
+
+      - name: Invalidate staging CloudFront
+        if: github.ref == 'refs/heads/dev'
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.STAGING_CF_DISTRIBUTION_ID }} --paths "/*"
+
+      - name: Deploy frontend to production S3
+        if: github.ref == 'refs/heads/main'
+        run: aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
+
+      - name: Invalidate production CloudFront
+        if: github.ref == 'refs/heads/main'
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
