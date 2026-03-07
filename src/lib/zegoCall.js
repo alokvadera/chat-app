@@ -124,10 +124,20 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
         throw new Error(data?.error || "Unable to fetch ZEGO token from server.");
       }
 
-      kitToken = String(data.token || "").trim();
-      if (!isLikelyKitToken(kitToken)) {
-        throw new Error("ZEGO token endpoint returned an invalid kit token.");
+      const tokenValue = String(data.token || "").trim();
+      if (!tokenValue) {
+        throw new Error("ZEGO token endpoint returned an empty token.");
       }
+
+      kitToken = isLikelyKitToken(tokenValue)
+        ? tokenValue
+        : ZegoUIKitPrebuilt.generateKitTokenForProduction(
+            appID,
+            tokenValue,
+            roomID,
+            userID,
+            userName,
+          );
     } catch (error) {
       throw new Error(`Failed to fetch ZEGO token: ${error?.message || "unknown error"}`);
     }
