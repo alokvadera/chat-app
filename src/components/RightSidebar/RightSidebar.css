@@ -339,19 +339,19 @@
 
 /* ── Light mode refinements ── */
 html[data-theme='light'] .rs-stat-card {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .rs-search-section {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .rs-close-btn {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .rs-search-item {
-  background: #E8E2D6;
+  background: #D6D0C4;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -573,15 +573,15 @@ html[data-theme='light'] .rs-search-item {
 
 /* ── Light mode ── */
 html[data-theme='light'] .rs-pinned-item {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .rs-file-item {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .rs-media-tab:hover {
-  background: #E8E2D6;
+  background: #D6D0C4;
 }
 
 /* ── Group profile ── */

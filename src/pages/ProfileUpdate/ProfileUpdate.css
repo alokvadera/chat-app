@@ -243,7 +243,7 @@
 }
 
 .light-preview {
-  background: linear-gradient(135deg, #E8E2D6 0%, #DED8CC 100%);
+  background: linear-gradient(135deg, #D6D0C4 0%, #CBC5B9 100%);
 }
 
 .dark-preview {
@@ -251,7 +251,7 @@
 }
 
 .system-preview {
-  background: linear-gradient(135deg, #E8E2D6 50%, #1A1A1F 50%);
+  background: linear-gradient(135deg, #D6D0C4 50%, #1A1A1F 50%);
 }
 
 .theme-label {

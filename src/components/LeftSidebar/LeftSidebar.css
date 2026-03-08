@@ -291,19 +291,19 @@
 
 /* ── Light mode refinements ── */
 html[data-theme='light'] .ls-search {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .friends:hover {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .friends.add-user {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .friend-status.offline {
-  background: #C4BDB0;
+  background: #B0AAA0;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -764,29 +764,29 @@ html[data-theme='light'] .friend-status.offline {
 
 /* ── Light mode ── */
 html[data-theme='light'] .new-group-btn {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .group-name-input {
-  background: #F5F0E6;
+  background: #E4DED2;
 }
 
 html[data-theme='light'] .new-group-form {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .group-member-item:hover {
-  background: #E8E2D6;
+  background: #D6D0C4;
 }
 
 html[data-theme='light'] .group-member-item.selected {
-  background: #E8E2D6;
+  background: #D6D0C4;
 }
 
 html[data-theme='light'] .friends.has-unread {
-  background: #F2ECE1;
+  background: #DDD7CB;
 }
 
 html[data-theme='light'] .online-dot {
-  border-color: #E8E2D6;
+  border-color: #D6D0C4;
 }

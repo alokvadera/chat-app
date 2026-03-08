@@ -1240,7 +1240,7 @@ const ChatBox = () => {
             <button type="button" className="input-icon cancel-record" onClick={cancelVoiceRecording} title="Cancel">✕</button>
             <button type="button" className="send-btn" onClick={handleVoiceRecord} title="Send voice message">
               <span className="send-icon">
-                <svg viewBox="0 0 24 24"><path d="M22 2L11 13" /><path d="M22 2L15 22L11 13L2 9L22 2Z" /></svg>
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
               </span>
             </button>
           </div>
@@ -1278,7 +1278,7 @@ const ChatBox = () => {
               onClick={() => setShowEmojiPicker((p) => !p)} title="Emoji">😊</button>
             <button type="button" className="send-btn" onClick={sendMessage} title="Send message" aria-label="Send message">
               <span className="send-icon">
-                <svg viewBox="0 0 24 24"><path d="M22 2L11 13" /><path d="M22 2L15 22L11 13L2 9L22 2Z" /></svg>
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
               </span>
             </button>
           </div>
