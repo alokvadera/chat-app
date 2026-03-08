@@ -334,10 +334,25 @@ const LeftSidebar = () => {
       {/* New group form */}
       {showNewGroup ? (
         <div className="new-group-form">
+          <div className="group-form-header">
+            <span className="group-form-title">Create Group</span>
+            <button type="button" className="group-form-close" onClick={() => { setShowNewGroup(false); setSelectedMembers([]); setGroupName(""); }}>✕</button>
+          </div>
           <input type="text" placeholder="Group name" value={groupName}
             onChange={(e) => setGroupName(e.target.value)} className="group-name-input" />
+          {selectedMembers.length > 0 ? (
+            <div className="group-selected-chips">
+              {selectedMembers.map((m) => (
+                <span key={m.id} className="member-chip">
+                  <img src={m.avatar || assets.avatar_icon} alt="" />
+                  {m.name?.split(' ')[0] || 'User'}
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedMembers((prev) => prev.filter((p) => p.id !== m.id)); }}>✕</button>
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="group-member-list">
-            <p className="group-form-label">Select members:</p>
+            <p className="group-form-label">Add members</p>
             {chatData.map((item) => {
               const isSelected = selectedMembers.some((m) => m.id === item.userData?.id);
               return (

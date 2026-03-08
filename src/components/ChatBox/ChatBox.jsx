@@ -999,10 +999,18 @@ const ChatBox = () => {
       <div className="chat-user">
         <img src={chatUserAvatar} alt="" />
         <div className="chat-user-meta">
-          <p>{chatUser.userData.name}</p>
-          <span className={`presence ${isOnline ? "online" : "away"}`}>
-            {typingUsers.length ? typingIndicatorLabel : isOnline ? "Online" : "Offline"}
-          </span>
+          <p>
+            {chatUser.isGroup ? (chatUser.groupName || "Group") : (chatUser.userData?.name || "User")}
+          </p>
+          {chatUser.isGroup ? (
+            <span className="group-member-count">
+              {Array.isArray(chatUser.groupMembers) ? chatUser.groupMembers.length : 0} members
+            </span>
+          ) : (
+            <span className={`presence ${isOnline ? "online" : "away"}`}>
+              {typingUsers.length ? typingIndicatorLabel : isOnline ? "Online" : "Offline"}
+            </span>
+          )}
         </div>
         <div className="chat-user-actions">
           <button type="button" className="icon-btn" title="Search" onClick={() => setShowSearch((p) => !p)}>🔍</button>
@@ -1231,7 +1239,9 @@ const ChatBox = () => {
             <span className="recording-indicator">🔴 Recording {formatRecordingTime(recordingTime)}</span>
             <button type="button" className="input-icon cancel-record" onClick={cancelVoiceRecording} title="Cancel">✕</button>
             <button type="button" className="send-btn" onClick={handleVoiceRecord} title="Send voice message">
-              <img src={assets.send_button} alt="" />
+              <span className="send-icon">
+                <svg viewBox="0 0 24 24"><path d="M22 2L11 13" /><path d="M22 2L15 22L11 13L2 9L22 2Z" /></svg>
+              </span>
             </button>
           </div>
         ) : (
@@ -1267,7 +1277,9 @@ const ChatBox = () => {
             <button ref={emojiButtonRef} type="button" className="input-icon"
               onClick={() => setShowEmojiPicker((p) => !p)} title="Emoji">😊</button>
             <button type="button" className="send-btn" onClick={sendMessage} title="Send message" aria-label="Send message">
-              <img src={assets.send_button} alt="" />
+              <span className="send-icon">
+                <svg viewBox="0 0 24 24"><path d="M22 2L11 13" /><path d="M22 2L15 22L11 13L2 9L22 2Z" /></svg>
+              </span>
             </button>
           </div>
         )}
@@ -1285,6 +1297,7 @@ const ChatBox = () => {
     <div className={`chat-welcome ${chatVisible ? "" : "hidden"}`}>
       <img src="/logo-icon.svg" alt="" />
       <p>Chat anytime, anywhere</p>
+      <span className="welcome-subtitle">Select a conversation to start messaging</span>
     </div>
   );
 };
