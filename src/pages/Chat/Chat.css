@@ -28,10 +28,22 @@
   gap: 12px;
   padding: 0 24px;
   height: 56px;
-  border-bottom: 1px solid var(--cn-border);
+  border-bottom: none;
   background: var(--panel-bg);
   color: var(--text-primary);
   flex-shrink: 0;
+  position: relative;
+}
+
+.chat-shell-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cn-accent) 0%, var(--cn-accent2) 40%, transparent 100%);
+  opacity: 0.7;
 }
 
 .chat-shell-title {
@@ -58,15 +70,34 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.01em;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-toggle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--cn-accent) 0%, var(--cn-accent2) 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
 .theme-toggle:hover {
-  background: var(--cn-accent);
   color: #F5F0E6;
   border-color: var(--cn-accent);
-  box-shadow: 0 2px 12px var(--accent-glow-strong);
+  box-shadow: 0 4px 18px var(--accent-glow-strong);
+  transform: translateY(-1px);
+}
+
+.theme-toggle:hover::before {
+  opacity: 1;
+}
+
+.theme-toggle:active {
+  transform: translateY(0);
 }
 
 .chat-container {
@@ -99,6 +130,12 @@
   font-family: var(--cn-font-display);
   font-size: 50px;
   color: var(--text-primary);
+  animation: loadingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
 @media (max-width:900px) {
@@ -139,5 +176,5 @@ html[data-theme='light'] .chat-shell {
 }
 
 html[data-theme='light'] .theme-toggle {
-  background: #fff;
+  background: #F2ECE1;
 }

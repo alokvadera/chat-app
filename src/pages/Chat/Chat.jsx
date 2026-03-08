@@ -38,7 +38,9 @@ const Chat = () => {
               aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {theme === "dark" ? "☀ Light Mode" : "🌙 Dark Mode"}
+              <span style={{ position: 'relative', zIndex: 1 }}>
+                {theme === "dark" ? "☀ Light" : "🌙 Dark"}
+              </span>
             </button>
           </div>
           <div className="chat-container">

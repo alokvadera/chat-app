@@ -78,10 +78,11 @@
 }
 
 .gl-nav.scrolled {
-  background: rgba(20, 20, 23, 0.85);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border-bottom: 1px solid var(--gl-border);
+  background: rgba(20, 20, 23, 0.88);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border-bottom: 1px solid rgba(46, 46, 53, 0.6);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .gl-nav-inner {
@@ -140,13 +141,31 @@
   font-size: 14px;
   font-family: var(--gl-font-body);
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.gl-nav-cta::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  transform: skewX(-25deg);
+  transition: left 0.5s ease;
+}
+
+.gl-nav-cta:hover::after {
+  left: 125%;
 }
 
 .gl-nav-cta:hover {
   background: var(--gl-accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px var(--gl-accent-glow);
+  box-shadow: 0 6px 24px var(--gl-accent-glow);
 }
 
 .gl-mobile-btn {
@@ -171,12 +190,12 @@
 
 .gl-hero-glow {
   position: absolute;
-  width: 600px;
-  height: 600px;
+  width: 700px;
+  height: 700px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(196, 97, 58, 0.15) 0%, transparent 70%);
-  top: -100px;
-  right: -100px;
+  background: radial-gradient(circle, rgba(196, 97, 58, 0.18) 0%, rgba(196, 97, 58, 0.05) 40%, transparent 70%);
+  top: -120px;
+  right: -120px;
   pointer-events: none;
   animation: softGlow 6s ease-in-out infinite;
 }
@@ -260,13 +279,31 @@
   border: none;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.2s, transform 0.2s, box-shadow 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.gl-btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  transform: skewX(-25deg);
+  transition: left 0.6s ease;
+}
+
+.gl-btn-primary:hover::after {
+  left: 125%;
 }
 
 .gl-btn-primary:hover {
   background: var(--gl-accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px var(--gl-accent-glow);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 40px var(--gl-accent-glow);
 }
 
 .gl-btn-ghost {
@@ -303,9 +340,15 @@
   border: 1px solid var(--gl-border);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px var(--gl-accent-glow);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.45), 0 0 48px var(--gl-accent-glow), inset 0 1px 0 rgba(255,255,255,0.04);
   max-width: 420px;
   margin-left: auto;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s;
+}
+
+.gl-chat-mock:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5), 0 0 60px var(--gl-accent-glow);
 }
 
 .gl-mock-header {
@@ -513,13 +556,31 @@
   border: 1px solid var(--gl-border);
   border-radius: var(--gl-radius);
   padding: 32px 28px;
-  transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.gl-feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gl-accent), var(--gl-accent-hover), transparent);
+  opacity: 0;
+  transition: opacity 0.35s;
 }
 
 .gl-feature-card:hover {
   border-color: rgba(196, 97, 58, 0.3);
-  transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 0 20px rgba(196, 97, 58, 0.08);
+}
+
+.gl-feature-card:hover::before {
+  opacity: 1;
 }
 
 .gl-feature-icon {
@@ -673,12 +734,13 @@
   border-radius: var(--gl-radius);
   border: 1px solid var(--gl-border);
   background: var(--gl-surface);
-  transition: border-color 0.3s, transform 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .gl-step:hover {
   border-color: rgba(196, 97, 58, 0.3);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
 }
 
 .gl-step-num {
@@ -724,12 +786,13 @@
   border: 1px solid var(--gl-border);
   border-radius: var(--gl-radius);
   background: var(--gl-bg);
-  transition: border-color 0.3s, transform 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .gl-stack-card:hover {
   border-color: rgba(196, 97, 58, 0.3);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
 }
 
 .gl-stack-card h4 {

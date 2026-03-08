@@ -15,10 +15,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: var(--cn-border-w) solid var(--cn-border);
-  box-shadow: 0 4px 16px var(--cn-shadow);
-  animation: slideIn 0.15s ease-out forwards;
+  box-shadow: 0 8px 28px var(--cn-shadow-lg);
+  animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   pointer-events: auto;
   font-family: var(--cn-font-body);
   font-size: 13px;
@@ -26,6 +26,8 @@
   text-transform: none;
   letter-spacing: 0;
   min-height: 44px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .notification.notification-success {
@@ -103,22 +105,22 @@
 
 @keyframes slideIn {
   from {
-    transform: translateX(420px);
+    transform: translateX(100px) scale(0.9);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
     opacity: 1;
   }
 }
 
 @keyframes slideOut {
   from {
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
     opacity: 1;
   }
   to {
-    transform: translateX(420px);
+    transform: translateX(100px) scale(0.9);
     opacity: 0;
   }
 }

@@ -42,11 +42,29 @@
   transition: all var(--transition-smooth);
   box-shadow: 0 2px 10px var(--accent-glow);
   letter-spacing: 0.01em;
+  position: relative;
+  overflow: hidden;
+}
+
+.new-message-btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transform: skewX(-25deg);
+  transition: left 0.5s ease;
+}
+
+.new-message-btn:hover::after {
+  left: 125%;
 }
 
 .new-message-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px var(--accent-glow-strong);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--accent-glow-strong);
   filter: brightness(1.08);
 }
 
@@ -94,13 +112,14 @@
   margin: 0 14px;
   border-radius: 12px;
   border: 1px solid var(--cn-border);
-  transition: all var(--transition-smooth);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ls-search:focus-within {
   border-color: var(--cn-accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: 0 0 0 3px var(--accent-glow), 0 4px 16px var(--accent-glow);
   background: var(--surface-2);
+  transform: scale(1.01);
 }
 
 .ls-search img {
@@ -141,10 +160,11 @@
   font-family: var(--cn-font-body);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
   padding: 14px 16px 10px;
+  position: relative;
 }
 
 /* ── Contact items ── */
@@ -155,7 +175,7 @@
   padding: 10px 14px;
   cursor: pointer;
   font-size: 14px;
-  transition: all var(--transition-fast);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   border-radius: 12px;
   margin: 2px 8px;
@@ -168,7 +188,7 @@
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--cn-border);
-  transition: border-color var(--transition-base);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .friends div {
@@ -221,17 +241,20 @@
 
 .friends:hover {
   background: var(--surface-1);
+  transform: translateX(2px);
 }
 
 .friends:hover img {
   border-color: var(--cn-accent);
+  transform: scale(1.05);
 }
 
 /* ── Selected state ── */
 .friends.border {
   background: linear-gradient(135deg, var(--cn-accent) 0%, var(--cn-accent2) 100%);
   border-radius: 12px;
-  box-shadow: 0 4px 16px var(--accent-glow-strong);
+  box-shadow: 0 4px 20px var(--accent-glow-strong);
+  transform: scale(1.01);
 }
 
 .friends.border div p {
@@ -269,19 +292,19 @@
 
 /* ── Light mode refinements ── */
 html[data-theme='light'] .ls-search {
-  background: #fff;
+  background: #F2ECE1;
 }
 
 html[data-theme='light'] .friends:hover {
-  background: #fff;
+  background: #F2ECE1;
 }
 
 html[data-theme='light'] .friends.add-user {
-  background: #fff;
+  background: #F2ECE1;
 }
 
 html[data-theme='light'] .friend-status.offline {
-  background: #D9D3C7;
+  background: #C4BDB0;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -617,17 +640,17 @@ html[data-theme='light'] .friend-status.offline {
 
 /* ── Light mode ── */
 html[data-theme='light'] .new-group-btn {
-  background: #fff;
+  background: #F2ECE1;
 }
 
 html[data-theme='light'] .group-name-input {
-  background: #fff;
+  background: #F2ECE1;
 }
 
 html[data-theme='light'] .friends.has-unread {
-  background: #fff;
+  background: #F2ECE1;
 }
 
 html[data-theme='light'] .online-dot {
-  border-color: #F5F0E6;
+  border-color: #E8E2D6;
 }
