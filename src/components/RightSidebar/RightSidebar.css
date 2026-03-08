@@ -328,3 +328,226 @@ html[data-theme='light'] .rs-close-btn {
 html[data-theme='light'] .rs-search-item {
   background: #F5F0E6;
 }
+
+/* ═══════════════════════════════════════════════════
+   NEW FEATURES — Media tabs, Pinned, Files, Username
+   ═══════════════════════════════════════════════════ */
+
+/* ── Username display ── */
+.rs-username {
+  display: block;
+  font-family: var(--cn-font-body);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+/* ── Pinned messages toggle ── */
+.rs-pinned-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: var(--cn-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--cn-border);
+}
+
+.rs-pinned-toggle:hover {
+  background: var(--surface-1);
+}
+
+.rs-toggle-arrow {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ── Pinned panel ── */
+.rs-pinned-panel {
+  padding: 8px 16px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid var(--cn-border);
+}
+
+.rs-pinned-item {
+  border: 1px solid var(--cn-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface-1);
+  transition: border-color 0.2s;
+}
+
+.rs-pinned-item:hover {
+  border-color: var(--cn-accent);
+}
+
+.rs-pinned-item p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.rs-pinned-item span {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: block;
+}
+
+/* ── Media tabs ── */
+.rs-media-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0 16px 8px;
+  border: 1px solid var(--cn-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.rs-media-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--cn-font-body);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-right: 1px solid var(--cn-border);
+}
+
+.rs-media-tab:last-child {
+  border-right: none;
+}
+
+.rs-media-tab:hover {
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.rs-media-tab.active {
+  background: var(--cn-accent);
+  color: #F5F0E6;
+}
+
+.rs-media-content {
+  padding: 0 16px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ── Media grid (photos) ── */
+.rs-media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.rs-media-grid img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--cn-border);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.rs-media-grid img:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 14px var(--cn-shadow);
+}
+
+/* ── File list ── */
+.rs-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.rs-file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--cn-border);
+  border-radius: 10px;
+  background: var(--surface-1);
+  text-decoration: none;
+  transition: border-color 0.2s;
+}
+
+.rs-file-item:hover {
+  border-color: var(--cn-accent);
+}
+
+.rs-file-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.rs-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.rs-file-name {
+  font-family: var(--cn-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rs-file-size {
+  font-family: var(--cn-font-body);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.rs-link-item {
+  cursor: pointer;
+}
+
+.rs-link-url {
+  font-family: var(--cn-font-body);
+  font-size: 11px;
+  color: var(--cn-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* ── Light mode ── */
+html[data-theme='light'] .rs-pinned-item {
+  background: #fff;
+}
+
+html[data-theme='light'] .rs-file-item {
+  background: #fff;
+}
+
+html[data-theme='light'] .rs-media-tab:hover {
+  background: #F5F0E6;
+}

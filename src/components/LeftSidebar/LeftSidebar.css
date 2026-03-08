@@ -281,3 +281,348 @@ html[data-theme='light'] .friends.add-user {
 html[data-theme='light'] .friend-status.offline {
   background: #D9D3C7;
 }
+
+/* ═══════════════════════════════════════════════════
+   NEW FEATURES — Unread badges, Groups, Last seen
+   ═══════════════════════════════════════════════════ */
+
+/* ── Action row ── */
+.ls-action-row {
+  display: flex;
+  gap: 6px;
+  padding: 0 14px 10px;
+}
+
+.ls-action-row .new-message-btn {
+  flex: 1;
+  margin: 0;
+  width: auto;
+}
+
+.new-group-btn {
+  width: 44px;
+  height: 42px;
+  border: 1px solid var(--cn-border);
+  border-radius: 10px;
+  background: var(--surface-1);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+.new-group-btn:hover {
+  background: var(--cn-accent);
+  border-color: var(--cn-accent);
+}
+
+/* ── Total unread badge ── */
+.total-unread-badge {
+  background: var(--cn-accent);
+  color: #F5F0E6;
+  font-family: var(--cn-font-body);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: auto;
+}
+
+/* ── New group form ── */
+.new-group-form {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--cn-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group-name-input {
+  width: 100%;
+  border: 1px solid var(--cn-border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-family: var(--cn-font-body);
+  font-size: 13px;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.group-name-input:focus {
+  border-color: var(--cn-accent);
+}
+
+.group-form-label {
+  font-family: var(--cn-font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.group-member-list {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-member-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.group-member-item:hover {
+  background: var(--surface-1);
+}
+
+.group-member-item.selected {
+  background: var(--surface-2);
+}
+
+.group-member-item img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.group-member-item span {
+  font-family: var(--cn-font-body);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.check-mark {
+  margin-left: auto;
+  color: var(--cn-accent);
+  font-weight: 700;
+}
+
+.group-form-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.create-group-btn {
+  flex: 1;
+  background: var(--cn-accent);
+  color: #F5F0E6;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-family: var(--cn-font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.create-group-btn:hover {
+  background: var(--cn-accent2);
+}
+
+.cancel-group-btn {
+  padding: 9px 14px;
+  border: 1px solid var(--cn-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--cn-font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-group-btn:hover {
+  border-color: var(--text-muted);
+}
+
+/* ── Enhanced friend list items ── */
+.friend-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.friend-avatar-wrap img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--cn-border);
+  transition: border-color 0.2s;
+}
+
+.online-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  background: #4ade80;
+  border-radius: 50%;
+  border: 2px solid var(--panel-bg);
+  box-shadow: 0 0 4px rgba(74, 222, 128, 0.4);
+}
+
+.group-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  font-size: 12px;
+  background: var(--panel-bg);
+  border-radius: 50%;
+  padding: 1px;
+  line-height: 1;
+}
+
+.friend-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.friend-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.friend-name {
+  font-family: var(--cn-font-body);
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.friend-last-msg {
+  color: var(--text-muted);
+  font-family: var(--cn-font-body);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Unread badge ── */
+.unread-badge {
+  background: var(--cn-accent);
+  color: #F5F0E6;
+  font-family: var(--cn-font-body);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+
+.friends.has-unread {
+  background: var(--surface-1);
+}
+
+.friends.has-unread .friend-name {
+  font-weight: 700;
+}
+
+.friends.has-unread .friend-last-msg {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ── Active chat highlight ── */
+.friends.active {
+  background: var(--cn-accent);
+  box-shadow: 0 2px 12px rgba(196, 97, 58, 0.25);
+}
+
+.friends.active .friend-name {
+  color: #F5F0E6;
+}
+
+.friends.active .friend-last-msg {
+  color: rgba(245, 240, 230, 0.6);
+}
+
+.friends.active .friend-avatar-wrap img {
+  border-color: rgba(245, 240, 230, 0.3);
+}
+
+.friends.active .online-dot {
+  border-color: var(--cn-accent);
+  background: #F5F0E6;
+  box-shadow: none;
+}
+
+.friends.active .unread-badge {
+  background: #F5F0E6;
+  color: var(--cn-accent);
+}
+
+.friends.active .friend-status.online,
+.friends.active .last-seen-text {
+  color: rgba(245, 240, 230, 0.7);
+}
+
+/* ── Friend meta (right side) ── */
+.friend-meta {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.friend-status.online {
+  font-size: 10px;
+  font-family: var(--cn-font-body);
+  font-weight: 500;
+  color: #4ade80;
+  width: auto;
+  height: auto;
+  text-indent: 0;
+  overflow: visible;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.last-seen-text {
+  font-family: var(--cn-font-body);
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Light mode ── */
+html[data-theme='light'] .new-group-btn {
+  background: #fff;
+}
+
+html[data-theme='light'] .group-name-input {
+  background: #fff;
+}
+
+html[data-theme='light'] .friends.has-unread {
+  background: #fff;
+}
+
+html[data-theme='light'] .online-dot {
+  border-color: #F5F0E6;
+}

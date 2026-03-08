@@ -255,6 +255,11 @@ const AppContextProvider = (props) => {
     lastMessage: String(item?.lastMessage ?? item?.last_message ?? ""),
     updatedAt: parseTimestamp(item?.updatedAt ?? item?.updated_at),
     messageSeen: Boolean(item?.messageSeen ?? item?.message_seen ?? true),
+    unreadCount: Number(item?.unreadCount || 0),
+    isGroup: Boolean(item?.isGroup),
+    groupName: item?.groupName || "",
+    groupAvatar: item?.groupAvatar || "",
+    groupMembers: Array.isArray(item?.groupMembers) ? item.groupMembers : [],
   });
 
   const isUserOnline = useCallback((targetUser) => {
@@ -735,6 +740,7 @@ const AppContextProvider = (props) => {
     isUserOnline,
     updateCurrentUserPreferences,
     clearAppState,
+    presenceUsers,
   }), [
     userData,
     chatData,
@@ -748,6 +754,7 @@ const AppContextProvider = (props) => {
     isUserOnline,
     updateCurrentUserPreferences,
     clearAppState,
+    presenceUsers,
   ]);
 
   return (
