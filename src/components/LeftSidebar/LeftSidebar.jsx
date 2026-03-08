@@ -323,7 +323,7 @@ const LeftSidebar = () => {
     <div className={`ls ${chatVisible ? "hidden" : ""}`}>
       <div className="ls-top">
         <div className="ls-nav">
-          <img src={assets.logo} className="logo" alt="" />
+          <img src="/logo-full.svg" className="logo" alt="" />
         </div>
         <button
           className="new-message-btn"

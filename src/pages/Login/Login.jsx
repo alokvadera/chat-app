@@ -72,175 +72,191 @@ const Login = () => {
   };
 
   return (
-    <div className="login">
-      <div className="login-glass">
-        <form onSubmit={onSubmitHandler} className="login-form" autoComplete="off">
-          <img
-            src={knownAvatar || assets.avatar_icon}
-            alt="Profile"
-            className="login-form-icon"
-          />
-          <h2>{currState === "signup" ? "Create Account" : "Welcome Back"}</h2>
-          <p className="login-subtitle">
-            {currState === "signup"
-              ? "Create your account to start chatting securely."
-              : "Sign in to access your secure dashboard"}
-          </p>
+    <div className="lg-page">
+      {/* Background decoration */}
+      <div className="lg-glow" />
+      <div className="lg-glow lg-glow--2" />
 
-          {currState === "signup" && (
-            <div className="input-group">
-              <label>Name</label>
-              <input
-                onChange={(e) => setUserName(e.target.value)}
-                value={userName}
-                type="text"
-                placeholder="Your name"
-                className="form-input"
-                required
-              />
+      {/* Brand header */}
+      <a className="lg-brand" onClick={() => navigate("/")} tabIndex={0}>
+        <img src="/logo-icon.svg" alt="" />
+        <span>Chatly</span>
+      </a>
+
+      <div className="lg-container">
+        {/* Left — editorial side */}
+        <div className="lg-side">
+          <div className="lg-side-content">
+            <p className="lg-side-label">
+              <span className="lg-dot" />
+              Secure &amp; Realtime
+            </p>
+            <h1>
+              Conversations that <em>matter.</em>
+            </h1>
+            <p className="lg-side-sub">
+              End-to-end encrypted messaging with a design language
+              that respects your attention.
+            </p>
+
+            {/* mini chat mock */}
+            <div className="lg-mini-mock">
+              <div className="lg-mm-msg lg-mm-recv">
+                <div className="lg-mm-avatar">A</div>
+                <div className="lg-mm-bubble">Hey, are you free for a call? &#128222;</div>
+              </div>
+              <div className="lg-mm-msg lg-mm-sent">
+                <div className="lg-mm-bubble">Sure! Give me 5 minutes &#128640;</div>
+              </div>
+              <div className="lg-mm-msg lg-mm-recv">
+                <div className="lg-mm-avatar">A</div>
+                <div className="lg-mm-bubble lg-mm-typing">
+                  <span /><span /><span />
+                </div>
+              </div>
             </div>
-          )}
+          </div>
+        </div>
 
-          <div className="input-group">
-            <label>Email Address</label>
-            <input
-              onChange={(e) => setEmail(e.target.value)}
-              value={email}
-              type="email"
-              placeholder="name@company.com"
-              className="form-input"
-              autoComplete="email"
-              spellCheck={false}
-              autoCorrect="off"
-              autoCapitalize="none"
-              disabled={isSubmitting}
-              required
+        {/* Right — form */}
+        <div className="lg-form-wrap">
+          <form onSubmit={onSubmitHandler} className="lg-form" autoComplete="off">
+            <img
+              src={knownAvatar || assets.avatar_icon}
+              alt="Profile"
+              className="lg-avatar"
             />
-          </div>
+            <h2>{currState === "signup" ? "Create Account" : "Welcome Back"}</h2>
+            <p className="lg-subtitle">
+              {currState === "signup"
+                ? "Join Chatly and start secure conversations."
+                : "Sign in to continue to Chatly"}
+            </p>
 
-          <div className="input-group">
-            <div className="password-row">
-              <label>Password</label>
-              {currState === "login" ? (
-                <p className="forgot-mini" onClick={() => navigate("/forgot-password")}>
-                  Forgot?
-                </p>
-              ) : null}
-            </div>
-            <div className="password-input-wrap">
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword((prev) => !prev)}
-                title={showPassword ? "Hide password" : "Show password"}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                disabled={isSubmitting}
-              >
-                {showPassword ? (
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path
-                      d="M3 3L21 21"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M10.58 10.58A2 2 0 0013.42 13.42"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M9.88 5.09A9.76 9.76 0 0112 4.8c4.8 0 8.27 3.16 9.5 7.2a10.68 10.68 0 01-3.05 4.66"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M6.61 6.61A10.73 10.73 0 002.5 12c1.23 4.04 4.7 7.2 9.5 7.2 1.79 0 3.37-.44 4.73-1.17"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path
-                      d="M2.5 12C3.73 7.96 7.2 4.8 12 4.8s8.27 3.16 9.5 7.2c-1.23 4.04-4.7 7.2-9.5 7.2S3.73 16.04 2.5 12z"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-                  </svg>
-                )}
-              </button>
-              <input
-                onChange={(e) => setPassword(e.target.value)}
-                value={password}
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                className="form-input"
-                name="chatapp-password"
-                autoComplete="new-password"
-                disabled={isSubmitting}
-                required
-              />
-            </div>
-          </div>
-
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting
-              ? "Please wait..."
-              : currState === "signup"
-                ? "Create Account →"
-                : "Login →"}
-          </button>
-
-          <div className="or-divider">
-            <span>OR CONTINUE WITH</span>
-          </div>
-
-          <div className="login-alt-actions">
+            {/* Google button — first, prominent */}
             <button
               type="button"
               onClick={loginWithGoogle}
               disabled={isSubmitting}
-              className="alt-btn"
+              className="lg-google"
             >
-              Google
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 001 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Continue with Google
             </button>
-          </div>
 
-          <div className="login-forgot">
-            {currState === "signup" ? (
-              <p className="login-toggle">
-                Already have an account?
-                <span onClick={() => setCurrState("login")}> Sign in</span>
-              </p>
-            ) : (
-              <p className="login-toggle">
-                New here?
-                <span onClick={() => setCurrState("signup")}> Create an account</span>
-              </p>
+            <div className="lg-divider">
+              <span>or sign in with email</span>
+            </div>
+
+            {currState === "signup" && (
+              <div className="lg-field">
+                <label>Name</label>
+                <input
+                  onChange={(e) => setUserName(e.target.value)}
+                  value={userName}
+                  type="text"
+                  className="lg-input"
+                  required
+                />
+              </div>
             )}
 
-            {isDesignPreviewMode ? (
-              <p className="login-toggle">
-                Need reset page preview?
-                <span onClick={() => navigate("/reset-password")}> Open it</span>
-              </p>
-            ) : null}
-          </div>
-        </form>
+            <div className="lg-field">
+              <label>Email</label>
+              <input
+                onChange={(e) => setEmail(e.target.value)}
+                value={email}
+                type="email"
+                className="lg-input"
+                autoComplete="email"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="none"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
 
-        <p className="login-secure-note">
-          SECURE MESSAGING POWERED BY CHAT-APP
-        </p>
+            <div className="lg-field">
+              <div className="lg-field-row">
+                <label>Password</label>
+                {currState === "login" && (
+                  <span className="lg-forgot" onClick={() => navigate("/forgot-password")}>
+                    Forgot?
+                  </span>
+                )}
+              </div>
+              <div className="lg-pw-wrap">
+                <input
+                  onChange={(e) => setPassword(e.target.value)}
+                  value={password}
+                  type={showPassword ? "text" : "password"}
+                  className="lg-input"
+                  name="chatapp-password"
+                  autoComplete="new-password"
+                  disabled={isSubmitting}
+                  required
+                />
+                <button
+                  type="button"
+                  className="lg-pw-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  disabled={isSubmitting}
+                >
+                  {showPassword ? (
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M3 3L21 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      <path d="M10.58 10.58A2 2 0 0013.42 13.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M9.88 5.09A9.76 9.76 0 0112 4.8c4.8 0 8.27 3.16 9.5 7.2a10.68 10.68 0 01-3.05 4.66" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M6.61 6.61A10.73 10.73 0 002.5 12c1.23 4.04 4.7 7.2 9.5 7.2 1.79 0 3.37-.44 4.73-1.17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M2.5 12C3.73 7.96 7.2 4.8 12 4.8s8.27 3.16 9.5 7.2c-1.23 4.04-4.7 7.2-9.5 7.2S3.73 16.04 2.5 12z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="lg-submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? "Please wait..."
+                : currState === "signup"
+                  ? "Create Account"
+                  : "Sign In"}
+              {!isSubmitting && <span className="lg-arrow">&#8594;</span>}
+            </button>
+
+            <p className="lg-switch">
+              {currState === "signup" ? (
+                <>
+                  Already have an account?{" "}
+                  <span onClick={() => setCurrState("login")}>Sign in</span>
+                </>
+              ) : (
+                <>
+                  New to Chatly?{" "}
+                  <span onClick={() => setCurrState("signup")}>Create an account</span>
+                </>
+              )}
+            </p>
+
+            {isDesignPreviewMode && (
+              <p className="lg-switch">
+                Need reset page preview?{" "}
+                <span onClick={() => navigate("/reset-password")}>Open it</span>
+              </p>
+            )}
+          </form>
+        </div>
       </div>
     </div>
   );

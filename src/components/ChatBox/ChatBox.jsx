@@ -64,6 +64,10 @@ const ChatBox = () => {
   const shouldAutoScrollRef = useRef(true);
   const prevActiveMessageIdRef = useRef("");
   const prevMessageCountRef = useRef(0);
+  const currentUserIdRef = useRef("");
+  const peerTypingEnabledRef = useRef(true);
+  const peerVisibleRef = useRef(true);
+  const chatUserNameRef = useRef("User");
   const scrollToBottom = useCallback(() => {
     const container = chatMessagesRef.current;
     if (!container) return;
@@ -152,6 +156,17 @@ const ChatBox = () => {
   const currentUserVisible = currentUserVisibility !== "private";
   const peerAllowsAudioCalls = chatUser?.userData?.allow_audio_calls !== false;
   const peerAllowsVideoCalls = chatUser?.userData?.allow_video_calls !== false;
+
+  useEffect(() => {
+    currentUserIdRef.current = String(userData?.id || "").trim();
+  }, [userData?.id]);
+
+  useEffect(() => {
+    peerTypingEnabledRef.current = peerTypingEnabled;
+    peerVisibleRef.current = peerVisible;
+    chatUserNameRef.current = String(chatUser?.userData?.name || "User").trim() || "User";
+  }, [chatUser?.userData?.name, peerTypingEnabled, peerVisible]);
+
   const typingIndicatorLabel = useMemo(() => {
     if (!typingUsers.length) return "";
     if (typingUsers.length === 1) return `${typingUsers[0].userName} is typing...`;
@@ -285,7 +300,12 @@ const ChatBox = () => {
         isTyping,
       },
     });
-    console.log("typing event sent", Date.now());
+    console.log("typing event sent", {
+      roomId: activeMessageId,
+      userId: userData.id,
+      userName: userData?.name || userData?.username || "User",
+      isTyping,
+    });
   }, [activeMessageId, chatUser?.rId, shouldBroadcastTyping, userData?.id, userData?.name, userData?.username]);
 
   useEffect(() => () => {
@@ -321,16 +341,29 @@ const ChatBox = () => {
     }
   }, [sendTypingSignal, shouldBroadcastTyping]);
 
+  const clearTypingUser = useCallback((userId) => {
+    const nextUserId = String(userId || "").trim();
+    if (!nextUserId) return;
+
+    const existingTimer = typingTimersRef.current.get(nextUserId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      typingTimersRef.current.delete(nextUserId);
+    }
+
+    setTypingUsers((prev) => prev.filter((item) => item.userId !== nextUserId));
+  }, []);
+
   const applyTypingState = useCallback((payload) => {
     if (!payload) return;
-    console.log("typing event received", Date.now(), payload);
+    console.log("typing event received", payload);
 
     const eventRoomId = String(payload.roomId || "").trim();
     const eventUserId = String(payload.userId || "").trim();
 
     if (!eventRoomId || eventRoomId !== activeMessageId) return;
-    if (!eventUserId || eventUserId === String(userData?.id || "").trim()) return;
-    if (!peerTypingEnabled || !peerVisible) return;
+    if (!eventUserId || eventUserId === currentUserIdRef.current) return;
+    if (!peerTypingEnabledRef.current || !peerVisibleRef.current) return;
 
     const existingTimer = typingTimersRef.current.get(eventUserId);
     if (existingTimer) {
@@ -339,11 +372,11 @@ const ChatBox = () => {
     }
 
     if (!payload.isTyping) {
-      setTypingUsers((prev) => prev.filter((item) => item.userId !== eventUserId));
+      clearTypingUser(eventUserId);
       return;
     }
 
-    const nextUserName = String(payload.userName || chatUser?.userData?.name || "User").trim();
+    const nextUserName = String(payload.userName || chatUserNameRef.current || "User").trim();
     setTypingUsers((prev) => {
       const next = prev.filter((item) => item.userId !== eventUserId);
       next.push({ userId: eventUserId, userName: nextUserName });
@@ -351,12 +384,11 @@ const ChatBox = () => {
     });
 
     const timeoutId = setTimeout(() => {
-      typingTimersRef.current.delete(eventUserId);
-      setTypingUsers((prev) => prev.filter((item) => item.userId !== eventUserId));
+      clearTypingUser(eventUserId);
     }, TYPING_INDICATOR_TIMEOUT_MS);
 
     typingTimersRef.current.set(eventUserId, timeoutId);
-  }, [activeMessageId, chatUser?.userData?.name, peerTypingEnabled, peerVisible, userData?.id]);
+  }, [activeMessageId, clearTypingUser]);
 
   const onSelectEmoji = (emoji) => {
     setInput((prev) => `${prev}${emoji}`);
@@ -619,7 +651,14 @@ const ChatBox = () => {
           if (!isActive) return;
           const nextMessages = payload?.new?.messages;
           if (Array.isArray(nextMessages)) {
-            updateMessagesIfChanged(nextMessages);
+            const normalizedMessages = normalizeMessages(nextMessages);
+            const latestMessage = normalizedMessages[normalizedMessages.length - 1];
+
+            if (latestMessage?.sId && String(latestMessage.sId) !== currentUserIdRef.current) {
+              clearTypingUser(latestMessage.sId);
+            }
+
+            updateMessagesIfChanged(normalizedMessages);
           }
         },
       )
@@ -642,7 +681,16 @@ const ChatBox = () => {
       setTypingUsers([]);
       supabase.removeChannel(channel);
     };
-  }, [activeMessageId, applyTypingState, getOrCreateMessageRow, isDesignPreviewMode, setMessages, updateMessagesIfChanged]);
+  }, [
+    activeMessageId,
+    applyTypingState,
+    clearTypingUser,
+    getOrCreateMessageRow,
+    isDesignPreviewMode,
+    normalizeMessages,
+    setMessages,
+    updateMessagesIfChanged,
+  ]);
 
   const isOnline = isUserOnline(chatUser?.userData);
 
@@ -671,7 +719,7 @@ const ChatBox = () => {
         <div className="chat-user-meta">
           <p>{chatUser.userData.name}</p>
           <span className={`presence ${isOnline ? "online" : "away"}`}>
-            {typingUsers.length ? "Typing..." : isOnline ? "Online" : "Offline"}
+            {typingUsers.length ? typingIndicatorLabel : isOnline ? "Online" : "Offline"}
           </span>
         </div>
         <div className="chat-user-actions">
@@ -792,7 +840,11 @@ const ChatBox = () => {
                     }}
                   />
                 ) : (
-                  <p className="msg">{msg.text}</p>
+                  <div className="msg">
+                    <span className="msg-sender">{isSent ? "YOU" : chatUser.userData.name}</span>
+                    <div className="msg-divider" />
+                    <p className="msg-text">{msg.text}</p>
+                  </div>
                 )}
                 <p className="message-time">{convertTimestamp(msg.createdAt)}</p>
               </div>
@@ -908,7 +960,7 @@ const ChatBox = () => {
     </div>
   ) : (
     <div className={`chat-welcome ${chatVisible ? "" : "hidden"}`}>
-      <img src={assets.logo_icon} alt="" />
+      <img src="/logo-icon.svg" alt="" />
       <p>Chat anytime, anywhere</p>
     </div>
   );

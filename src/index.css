@@ -1,56 +1,77 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 :root {
-  --app-bg: #0f172a;
-  --app-bg-a: rgba(37, 99, 235, 0.18);
-  --app-bg-b: rgba(14, 165, 233, 0.14);
-  --shell-bg: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
-  --shell-border: rgba(148, 163, 184, 0.14);
-  --panel-bg: rgba(15, 23, 42, 0.82);
-  --panel-soft-bg: rgba(15, 23, 42, 0.72);
-  --panel-border: rgba(148, 163, 184, 0.14);
-  --surface-1: rgba(30, 41, 59, 0.9);
-  --surface-2: rgba(51, 65, 85, 0.92);
-  --text-primary: #e2e8f0;
-  --text-muted: rgba(226, 232, 240, 0.72);
-  --accent-1: #2563eb;
-  --accent-2: #38bdf8;
-  --inbound-msg: #1e293b;
-  --scroll-track: #162033;
-  --scroll-thumb: #475569;
-  --video-overlay: rgba(15, 23, 42, 0.88);
-  --video-border: rgba(148, 163, 184, 0.16);
-  --video-card-bg: rgba(30, 41, 59, 0.92);
+  /* Graphite Dark — refined editorial */
+  --app-bg: #1A1A1F;
+  --app-bg-a: rgba(196, 97, 58, 0.04);
+  --app-bg-b: rgba(245, 240, 230, 0.02);
+  --shell-bg: #1A1A1F;
+  --shell-border: #2E2E35;
+  --panel-bg: #1A1A1F;
+  --panel-soft-bg: #212126;
+  --panel-border: #2E2E35;
+  --surface-1: #242429;
+  --surface-2: #2E2E35;
+  --text-primary: #F5F0E6;
+  --text-muted: #9999A3;
+  --accent-1: #C4613A;
+  --accent-2: #E07B4C;
+  --inbound-msg: #242429;
+  --scroll-track: #1A1A1F;
+  --scroll-thumb: #3A3A42;
+  --video-overlay: rgba(26, 26, 31, 0.95);
+  --video-border: #2E2E35;
+  --video-card-bg: #242429;
+
+  /* Graphite design tokens */
+  --cn-accent: #C4613A;
+  --cn-accent2: #E07B4C;
+  --cn-highlight: #C4613A;
+  --cn-border: #2E2E35;
+  --cn-border-w: 1px;
+  --cn-shadow: rgba(0, 0, 0, 0.2);
+  --cn-radius: 12px;
+  --cn-font-display: 'DM Serif Display', Georgia, serif;
+  --cn-font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --icon-filter: brightness(0) invert(1);
 }
 
 html[data-theme='light'] {
-  --app-bg: #eef3fb;
-  --app-bg-a: rgba(0, 104, 255, 0.15);
-  --app-bg-b: rgba(92, 125, 255, 0.13);
-  --shell-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.97), rgba(245, 248, 255, 0.98));
-  --shell-border: rgba(41, 70, 128, 0.16);
-  --panel-bg: rgba(255, 255, 255, 0.78);
-  --panel-soft-bg: rgba(255, 255, 255, 0.8);
-  --panel-border: rgba(55, 93, 170, 0.16);
-  --surface-1: rgba(33, 72, 151, 0.08);
-  --surface-2: rgba(33, 72, 151, 0.14);
-  --text-primary: #102043;
-  --text-muted: rgba(16, 32, 67, 0.7);
-  --accent-1: #0e74ff;
-  --accent-2: #2f92ff;
-  --inbound-msg: rgba(34, 74, 155, 0.12);
-  --scroll-track: #dfe7f6;
-  --scroll-thumb: #8ca4d9;
-  --video-overlay: rgba(241, 245, 249, 0.92);
-  --video-border: rgba(55, 93, 170, 0.16);
-  --video-card-bg: rgba(255, 255, 255, 0.94);
+  /* Graphite Light — warm ivory editorial */
+  --app-bg: #F5F0E6;
+  --app-bg-a: rgba(196, 97, 58, 0.04);
+  --app-bg-b: rgba(26, 26, 31, 0.02);
+  --shell-bg: #F5F0E6;
+  --shell-border: #D9D3C7;
+  --panel-bg: #F5F0E6;
+  --panel-soft-bg: #EDE8DD;
+  --panel-border: #D9D3C7;
+  --surface-1: #FFFFFF;
+  --surface-2: #EDE8DD;
+  --text-primary: #1A1A1F;
+  --text-muted: #6B6B75;
+  --accent-1: #C4613A;
+  --accent-2: #E07B4C;
+  --inbound-msg: #FFFFFF;
+  --scroll-track: #F5F0E6;
+  --scroll-thumb: #C9C3B7;
+  --video-overlay: rgba(245, 240, 230, 0.95);
+  --video-border: #D9D3C7;
+  --video-card-bg: #FFFFFF;
+
+  --cn-accent: #C4613A;
+  --cn-accent2: #E07B4C;
+  --cn-highlight: #C4613A;
+  --cn-border: #D9D3C7;
+  --cn-shadow: rgba(0, 0, 0, 0.08);
+  --icon-filter: brightness(0);
 }
 
 html, body {
@@ -77,8 +98,8 @@ html, body {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -87,11 +108,11 @@ html, body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scroll-thumb);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #444;
+  background: var(--cn-accent);
 }
 
 * {

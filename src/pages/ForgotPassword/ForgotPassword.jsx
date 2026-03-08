@@ -37,7 +37,7 @@ const ForgotPassword = () => {
         setIsEmailSent(true);
         notify.success("Check your email for password reset link");
         setTimeout(() => {
-          navigate("/");
+          navigate("/auth");
         }, 3000);
         return;
       }
@@ -58,7 +58,7 @@ const ForgotPassword = () => {
       notify.success("Password reset link sent! Check your email.");
 
       setTimeout(() => {
-        navigate("/");
+        navigate("/auth");
       }, 3000);
     } catch (error) {
       console.error(error);
@@ -108,7 +108,7 @@ const ForgotPassword = () => {
 
               <p className="back-link">
                 Remember your password?{" "}
-                <span onClick={() => navigate("/")}> Back to login</span>
+                <span onClick={() => navigate("/auth")}> Back to login</span>
               </p>
             </form>
           ) : (
@@ -119,7 +119,7 @@ const ForgotPassword = () => {
                 Follow the link in your email to reset your password.
               </p>
               <button
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/auth")}
                 className="back-to-login-btn"
               >
                 Back to Login

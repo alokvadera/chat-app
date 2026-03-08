@@ -1,14 +1,18 @@
+/* ═══════════════════════════════════════════════════
+   GRAPHITE — Left Sidebar
+   ═══════════════════════════════════════════════════ */
+
 .ls {
   background: var(--panel-bg);
   color: var(--text-primary);
   height: 100%;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--panel-border);
+  border-right: 1px solid var(--cn-border);
 }
 
 .ls-top {
-  padding: 12px 12px 0;
+  padding: 0;
   flex-shrink: 0;
 }
 
@@ -16,65 +20,91 @@
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  margin-bottom: 12px;
+  padding: 14px 16px 10px;
 }
 
 .ls-nav .logo {
-  max-width: 112px;
+  max-width: 100px;
 }
 
 .new-message-btn {
-  width: 100%;
-  background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
-  color: #fff;
+  width: calc(100% - 28px);
+  margin: 0 14px 10px;
+  background: var(--cn-accent);
+  color: #F5F0E6;
   border: none;
-  border-radius: 999px;
+  border-radius: 10px;
   padding: 11px 14px;
-  font-size: 12px;
+  font-family: var(--cn-font-body);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  margin-bottom: 12px;
-  box-shadow: 0 8px 20px rgba(0, 116, 255, 0.42);
+  transition: background 0.2s, transform 0.15s, box-shadow 0.3s;
+  box-shadow: 0 2px 10px rgba(196, 97, 58, 0.2);
+}
+
+.new-message-btn:hover {
+  background: var(--cn-accent2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(196, 97, 58, 0.3);
+}
+
+.new-message-btn:active {
+  transform: translateY(0);
+  background: var(--cn-accent);
 }
 
 .ls-mini-links {
   display: grid;
-  gap: 4px;
-  margin-bottom: 10px;
+  gap: 0;
+  margin: 0 14px 10px;
+  border: 1px solid var(--cn-border);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .ls-mini-links p {
+  font-family: var(--cn-font-body);
   font-size: 12px;
+  font-weight: 500;
   color: var(--text-muted);
-  padding: 8px 10px;
-  border-radius: 10px;
+  padding: 9px 14px;
   cursor: pointer;
+  border-bottom: 1px solid var(--cn-border);
+  transition: background 0.2s, color 0.2s;
+}
+
+.ls-mini-links p:last-child {
+  border-bottom: none;
 }
 
 .ls-mini-links p.active,
 .ls-mini-links p:hover {
-  background: var(--surface-2);
-  color: var(--text-primary);
+  background: var(--cn-accent);
+  color: #F5F0E6;
 }
 
 .ls-search {
   background: var(--surface-1);
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 9px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--panel-border);
-  transition: all 0.3s;
+  gap: 10px;
+  padding: 9px 14px;
+  margin: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--cn-border);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .ls-search:focus-within {
-  background: var(--surface-2);
+  border-color: var(--cn-accent);
+  box-shadow: 0 0 0 3px rgba(196, 97, 58, 0.1);
 }
 
 .ls-search img {
   width: 13px;
-  opacity: 0.55;
+  opacity: 0.45;
+  filter: var(--icon-filter);
 }
 
 .ls-search input {
@@ -82,40 +112,61 @@
   border: none;
   outline: none;
   color: var(--text-primary);
-  font-size: 12px;
+  font-family: var(--cn-font-body);
+  font-size: 13px;
   flex: 1;
 }
 
 .ls-search input::placeholder {
   color: var(--text-muted);
+  font-size: 13px;
 }
 
+/* ── Conversations list ── */
 .ls-list {
   display: flex;
   flex-direction: column;
   flex: 1;
   overflow-y: auto;
-  padding: 10px 0 8px;
+  padding: 0 0 8px;
+  border-top: 1px solid var(--cn-border);
+  margin-top: 10px;
 }
 
+.ls-list::before {
+  content: 'Conversations';
+  display: block;
+  font-family: var(--cn-font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 14px 16px 8px;
+}
+
+/* ── Contact items ── */
 .friends {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 10px 14px;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.2s;
+  transition: background 0.15s;
   position: relative;
-  border-radius: 14px;
-  margin: 0 8px 4px;
+  border-radius: 10px;
+  margin: 2px 8px;
+  border: none;
 }
 
 .friends img {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   object-fit: cover;
+  border: 2px solid var(--cn-border);
+  transition: border-color 0.2s;
 }
 
 .friends div {
@@ -127,7 +178,8 @@
 }
 
 .friends div p {
-  font-weight: 500;
+  font-family: var(--cn-font-body);
+  font-weight: 600;
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
@@ -137,6 +189,7 @@
 
 .friends span {
   color: var(--text-muted);
+  font-family: var(--cn-font-body);
   font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
@@ -144,45 +197,61 @@
 }
 
 .friend-status {
-  font-size: 9px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
+  font-size: 0;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  overflow: hidden;
+  text-indent: -9999px;
   flex-shrink: 0;
 }
 
 .friend-status.online {
-  color: #6ad38f;
-  background: rgba(77, 196, 113, 0.14);
-  border-color: rgba(77, 196, 113, 0.4);
+  background: #4ade80;
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.4);
 }
 
 .friend-status.offline {
-  color: var(--text-muted);
-  background: var(--surface-1);
-  border-color: var(--panel-border);
+  background: var(--surface-2);
 }
 
 .friends:hover {
-  background: var(--surface-2);
+  background: var(--surface-1);
+}
+
+.friends:hover img {
+  border-color: var(--cn-accent);
+}
+
+/* ── Selected state ── */
+.friends.border {
+  background: var(--cn-accent);
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(196, 97, 58, 0.25);
+}
+
+.friends.border div p {
+  color: #F5F0E6;
+}
+
+.friends.border span {
+  color: rgba(245, 240, 230, 0.6);
 }
 
 .friends.border img {
-  border: 2px solid #1e8eff;
+  border-color: rgba(245, 240, 230, 0.3);
 }
 
-.friends.border div span {
-  color: #4ea9ff;
-  font-weight: 500;
+.friends.border .friend-status.online {
+  background: #F5F0E6;
+  box-shadow: none;
 }
 
 .friends.add-user {
-  background: var(--surface-2);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--cn-border);
 }
 
 @media (max-width:900px) {
@@ -194,4 +263,21 @@
   .ls-mini-links {
     display: none;
   }
+}
+
+/* ── Light mode refinements ── */
+html[data-theme='light'] .ls-search {
+  background: #fff;
+}
+
+html[data-theme='light'] .friends:hover {
+  background: #fff;
+}
+
+html[data-theme='light'] .friends.add-user {
+  background: #fff;
+}
+
+html[data-theme='light'] .friend-status.offline {
+  background: #D9D3C7;
 }

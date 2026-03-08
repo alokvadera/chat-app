@@ -1,6 +1,5 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import "./ProfileUpdate.css";
-import assets from "../../assets/assets";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import upload from "../../lib/upload";
@@ -30,6 +29,7 @@ const ProfileUpdate = () => {
   const [allowAudioCalls, setAllowAudioCalls] = useState(true);
   const [allowVideoCalls, setAllowVideoCalls] = useState(true);
   const { setUserData, userData } = useContext(AppContext);
+  const initialValues = useRef(null);
 
   const isMissingColumnError = (error) => {
     const code = String(error?.code || "");
@@ -166,6 +166,18 @@ const ProfileUpdate = () => {
         setTypingIndicators(nextUser?.typing_indicators || "on");
         setAllowAudioCalls(nextUser?.allow_audio_calls !== false);
         setAllowVideoCalls(nextUser?.allow_video_calls !== false);
+        if (!initialValues.current) {
+          initialValues.current = {
+            name: nextUser?.name || "",
+            bio: nextUser?.bio || "",
+            avatar: nextUser?.avatar || "",
+            themeMode: getThemeMode(),
+            profileVisibility: nextUser?.profile_visibility || "public",
+            typingIndicators: nextUser?.typing_indicators || "on",
+            allowAudioCalls: nextUser?.allow_audio_calls !== false,
+            allowVideoCalls: nextUser?.allow_video_calls !== false,
+          };
+        }
         return;
       }
 
@@ -196,9 +208,21 @@ const ProfileUpdate = () => {
           setAllowAudioCalls(mergedUser.allow_audio_calls !== false);
           setAllowVideoCalls(mergedUser.allow_video_calls !== false);
           saveUserPreferencesToStorage(userId, mergedUser);
+          if (!initialValues.current) {
+            initialValues.current = {
+              name: mergedUser.name || "",
+              bio: mergedUser.bio || "",
+              avatar: mergedUser.avatar || "",
+              themeMode: getThemeMode(),
+              profileVisibility: mergedUser.profile_visibility || "public",
+              typingIndicators: mergedUser.typing_indicators || "on",
+              allowAudioCalls: mergedUser.allow_audio_calls !== false,
+              allowVideoCalls: mergedUser.allow_video_calls !== false,
+            };
+          }
         }
       } else {
-        navigate("/");
+        navigate("/auth");
       }
     };
 
@@ -225,7 +249,7 @@ const ProfileUpdate = () => {
                     ? URL.createObjectURL(image)
                     : prevImage
                       ? prevImage
-                      : assets.logo_icon
+                      : "/logo-icon.svg"
                 }
                 alt=""
               />
@@ -404,17 +428,34 @@ const ProfileUpdate = () => {
               type="button"
               className="ghost"
               onClick={() => {
-                setName(userData?.name || "");
-                setBio(userData?.bio || "");
-                setImage(false);
-                const resetPrefs = normalizeUserPreferences(
-                  userData || {},
-                  getUserPreferencesFromStorage(uid || userData?.id),
-                );
-                setProfileVisibility(resetPrefs.profile_visibility || "public");
-                setTypingIndicators(resetPrefs.typing_indicators || "on");
-                setAllowAudioCalls(resetPrefs.allow_audio_calls !== false);
-                setAllowVideoCalls(resetPrefs.allow_video_calls !== false);
+                const init = initialValues.current;
+                if (init) {
+                  setName(init.name);
+                  setBio(init.bio);
+                  setPrevImage(init.avatar);
+                  setImage(false);
+                  setProfileVisibility(init.profileVisibility);
+                  setTypingIndicators(init.typingIndicators);
+                  setAllowAudioCalls(init.allowAudioCalls);
+                  setAllowVideoCalls(init.allowVideoCalls);
+                  setThemeMode(init.themeMode);
+                  applyThemeMode(init.themeMode);
+                } else {
+                  setName(userData?.name || "");
+                  setBio(userData?.bio || "");
+                  setImage(false);
+                  const resetPrefs = normalizeUserPreferences(
+                    userData || {},
+                    getUserPreferencesFromStorage(uid || userData?.id),
+                  );
+                  setProfileVisibility(resetPrefs.profile_visibility || "public");
+                  setTypingIndicators(resetPrefs.typing_indicators || "on");
+                  setAllowAudioCalls(resetPrefs.allow_audio_calls !== false);
+                  setAllowVideoCalls(resetPrefs.allow_video_calls !== false);
+                  setThemeMode(getThemeMode());
+                  applyThemeMode(getThemeMode());
+                }
+                toast.info("Changes discarded");
               }}
             >
               Discard Changes
