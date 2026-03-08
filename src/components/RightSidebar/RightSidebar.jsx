@@ -28,6 +28,7 @@ const RightSidebar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [mediaTab, setMediaTab] = useState("photos");
   const [showPinnedPanel, setShowPinnedPanel] = useState(false);
+  const isGroup = Boolean(chatUser?.isGroup);
   const chatUserAvatar = chatUser?.userData?.avatar || assets.avatar_icon;
 
   const msgImages = useMemo(
@@ -163,15 +164,21 @@ const RightSidebar = () => {
   return chatUser ? (
     <div className="rs">
       <div className="rs-profile">
-        <img src={chatUserAvatar} alt="" />
-        <h3>{chatUser.userData.name}</h3>
-        <span className={`rs-status ${isOnline ? "online" : "away"}`}>
-          {isOnline ? "Online" : formatLastSeen()}
-        </span>
-        {chatUser.userData.username ? (
+        <img src={isGroup ? (chatUser.groupAvatar || assets.avatar_icon) : chatUserAvatar} alt="" className={isGroup ? "rs-group-avatar" : ""} />
+        <h3>{isGroup ? (chatUser.groupName || "Group") : chatUser.userData.name}</h3>
+        {isGroup ? (
+          <span className="rs-status rs-group-info">
+            {(chatUser.groupMembers || []).length} members
+          </span>
+        ) : (
+          <span className={`rs-status ${isOnline ? "online" : "away"}`}>
+            {isOnline ? "Online" : formatLastSeen()}
+          </span>
+        )}
+        {!isGroup && chatUser.userData.username ? (
           <span className="rs-username">@{chatUser.userData.username}</span>
         ) : null}
-        <p>{chatUser.userData.bio}</p>
+        <p>{isGroup ? "" : chatUser.userData.bio}</p>
       </div>
       <hr />
 

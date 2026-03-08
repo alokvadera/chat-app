@@ -433,7 +433,12 @@ const AppContextProvider = (props) => {
         return;
       }
 
-      const peerIds = [...new Set(normalizedChats.map((item) => item.rId))];
+      // Only look up users for non-group chats
+      const peerIds = [...new Set(
+        normalizedChats
+          .filter((item) => !item.isGroup)
+          .map((item) => item.rId),
+      )];
       const usersById = new Map();
 
       if (peerIds.length) {
@@ -454,13 +459,28 @@ const AppContextProvider = (props) => {
       if (!isActive) return;
 
       const hydratedChats = normalizedChats
-        .map((item) => ({
-          ...item,
-          userData: normalizeUserPreferences(
-            usersById.get(item.rId) || fallbackChatUser(item.rId),
-            getUserPreferencesFromStorage(item.rId),
-          ),
-        }))
+        .map((item) => {
+          if (item.isGroup) {
+            return {
+              ...item,
+              userData: {
+                id: item.rId,
+                name: item.groupName || "Group",
+                avatar: item.groupAvatar || "",
+                bio: `${(item.groupMembers || []).length} members`,
+                last_seen: Date.now(),
+                profile_visibility: "public",
+              },
+            };
+          }
+          return {
+            ...item,
+            userData: normalizeUserPreferences(
+              usersById.get(item.rId) || fallbackChatUser(item.rId),
+              getUserPreferencesFromStorage(item.rId),
+            ),
+          };
+        })
         .sort((a, b) => b.updatedAt - a.updatedAt);
 
       setChatData(hydratedChats);

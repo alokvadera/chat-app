@@ -19,16 +19,22 @@
   --panel-border: #2E2E35;
   --surface-1: #242429;
   --surface-2: #2E2E35;
+  --surface-3: #35353D;
   --text-primary: #F5F0E6;
+  --text-secondary: #C8C4BC;
   --text-muted: #9999A3;
   --accent-1: #C4613A;
   --accent-2: #E07B4C;
+  --accent-glow: rgba(196, 97, 58, 0.15);
+  --accent-glow-strong: rgba(196, 97, 58, 0.25);
   --inbound-msg: #242429;
   --scroll-track: #1A1A1F;
   --scroll-thumb: #3A3A42;
   --video-overlay: rgba(26, 26, 31, 0.95);
   --video-border: #2E2E35;
   --video-card-bg: #242429;
+  --success: #4ade80;
+  --success-muted: rgba(74, 222, 128, 0.12);
 
   /* Graphite design tokens */
   --cn-accent: #C4613A;
@@ -37,10 +43,15 @@
   --cn-border: #2E2E35;
   --cn-border-w: 1px;
   --cn-shadow: rgba(0, 0, 0, 0.2);
+  --cn-shadow-lg: rgba(0, 0, 0, 0.35);
   --cn-radius: 12px;
+  --cn-radius-lg: 16px;
   --cn-font-display: 'DM Serif Display', Georgia, serif;
   --cn-font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --icon-filter: brightness(0) invert(1);
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html[data-theme='light'] {
@@ -55,22 +66,29 @@ html[data-theme='light'] {
   --panel-border: #D9D3C7;
   --surface-1: #FFFFFF;
   --surface-2: #EDE8DD;
+  --surface-3: #E5E0D5;
   --text-primary: #1A1A1F;
+  --text-secondary: #4A4A52;
   --text-muted: #6B6B75;
   --accent-1: #C4613A;
   --accent-2: #E07B4C;
+  --accent-glow: rgba(196, 97, 58, 0.08);
+  --accent-glow-strong: rgba(196, 97, 58, 0.15);
   --inbound-msg: #FFFFFF;
   --scroll-track: #F5F0E6;
   --scroll-thumb: #C9C3B7;
   --video-overlay: rgba(245, 240, 230, 0.95);
   --video-border: #D9D3C7;
   --video-card-bg: #FFFFFF;
+  --success: #22c55e;
+  --success-muted: rgba(34, 197, 94, 0.1);
 
   --cn-accent: #C4613A;
   --cn-accent2: #E07B4C;
   --cn-highlight: #C4613A;
   --cn-border: #D9D3C7;
   --cn-shadow: rgba(0, 0, 0, 0.08);
+  --cn-shadow-lg: rgba(0, 0, 0, 0.15);
   --icon-filter: brightness(0);
 }
 
@@ -98,17 +116,18 @@ html, body {
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--scroll-track);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--scroll-thumb);
-  border-radius: 4px;
+  border-radius: 6px;
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {

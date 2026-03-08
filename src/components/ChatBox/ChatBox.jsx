@@ -408,57 +408,80 @@ const ChatBox = () => {
     if (error) throw error;
   }, [activeMessageId]);
 
-  // ─── Helper: update both users' chats_data ────────────────────────────────
+  // ─── Helper: update users' chats_data ────────────────────────────────
   const updateChatsData = async (lastMessage) => {
     const peerId = String(chatUser?.rId ?? chatUser?.rid ?? "").trim();
     const senderId = String(userData?.id || "").trim();
-    if (!senderId || !peerId || !activeMessageId) return;
+    if (!senderId || !activeMessageId) return;
 
-    const userTargets = [
-      { id: senderId, peerId, messageSeen: true, incrementUnread: false },
-      { id: peerId, peerId: senderId, messageSeen: false, incrementUnread: true },
-    ];
+    const isGroup = Boolean(chatUser?.isGroup);
+    let userTargets;
+
+    if (isGroup) {
+      // For groups, update all members' chats_data
+      const members = Array.isArray(chatUser?.groupMembers) ? chatUser.groupMembers : [];
+      userTargets = members.map((memberId) => ({
+        id: memberId,
+        messageSeen: memberId === senderId,
+        incrementUnread: memberId !== senderId,
+      }));
+    } else {
+      if (!peerId) return;
+      userTargets = [
+        { id: senderId, messageSeen: true, incrementUnread: false },
+        { id: peerId, messageSeen: false, incrementUnread: true },
+      ];
+    }
 
     for (const target of userTargets) {
-      const { data, error } = await supabase
-        .from("chats").select("chats_data").eq("id", target.id).limit(1);
-      if (error) throw error;
+      try {
+        const { data, error } = await supabase
+          .from("chats").select("chats_data").eq("id", target.id).limit(1);
+        if (error) throw error;
 
-      const chatRow = data?.[0];
-      const chatsData = [...toMessagesArray(chatRow?.chats_data)];
-      const chatIndex = chatsData.findIndex((c) => {
-        const rowMsgId = getMessageId(c);
-        const rowPeerId = String(c?.rId ?? c?.rid ?? "").trim();
-        return rowMsgId === activeMessageId || (rowPeerId && rowPeerId === target.peerId);
-      });
+        const chatRow = data?.[0];
+        const chatsData = [...toMessagesArray(chatRow?.chats_data)];
+        const chatIndex = chatsData.findIndex((c) => {
+          const rowMsgId = getMessageId(c);
+          return rowMsgId === activeMessageId;
+        });
 
-      const existing = chatIndex >= 0 ? chatsData[chatIndex] : {};
-      const currentUnread = Number(existing.unreadCount || 0);
-      const updatedEntry = {
-        ...existing,
-        messageId: activeMessageId,
-        rId: target.peerId,
-        lastMessage,
-        updatedAt: Date.now(),
-        messageSeen: target.messageSeen,
-        unreadCount: target.incrementUnread ? currentUnread + 1 : 0,
-      };
+        const existing = chatIndex >= 0 ? chatsData[chatIndex] : {};
+        const currentUnread = Number(existing.unreadCount || 0);
+        const updatedEntry = {
+          ...existing,
+          messageId: activeMessageId,
+          rId: isGroup ? activeMessageId : (target.id === senderId ? peerId : senderId),
+          lastMessage,
+          updatedAt: Date.now(),
+          messageSeen: target.messageSeen,
+          unreadCount: target.incrementUnread ? currentUnread + 1 : 0,
+          ...(isGroup ? {
+            isGroup: true,
+            groupName: chatUser?.groupName || "",
+            groupMembers: chatUser?.groupMembers || [],
+          } : {}),
+        };
 
-      if (chatIndex !== -1) {
-        chatsData[chatIndex] = updatedEntry;
-      } else {
-        chatsData.push(updatedEntry);
+        if (chatIndex !== -1) {
+          chatsData[chatIndex] = updatedEntry;
+        } else {
+          chatsData.push(updatedEntry);
+        }
+
+        if (!chatRow) {
+          const { error: insertError } = await supabase
+            .from("chats").insert({ id: target.id, chats_data: chatsData });
+          if (insertError) throw insertError;
+          continue;
+        }
+        const { error: updateError } = await supabase
+          .from("chats").update({ chats_data: chatsData }).eq("id", target.id);
+        if (updateError) throw updateError;
+      } catch (err) {
+        // Don't fail the whole send if one member's chats_data update fails
+        console.warn("updateChatsData target error:", target.id, err?.message);
       }
-
-      if (!chatRow) {
-        const { error: insertError } = await supabase
-          .from("chats").insert({ id: target.id, chats_data: chatsData });
-        if (insertError) throw insertError;
-        continue;
-      }
-      const { error: updateError } = await supabase
-        .from("chats").update({ chats_data: chatsData }).eq("id", target.id);
-      if (updateError) throw updateError;
     }
   };
 
