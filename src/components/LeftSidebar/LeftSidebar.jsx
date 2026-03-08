@@ -353,7 +353,7 @@ const LeftSidebar = () => {
           ) : null}
           <div className="group-member-list">
             <p className="group-form-label">Add members</p>
-            {chatData.map((item) => {
+            {chatData.filter((item) => !item.isGroup).map((item) => {
               const isSelected = selectedMembers.some((m) => m.id === item.userData?.id);
               return (
                 <div key={getPeerId(item)} className={`group-member-item ${isSelected ? "selected" : ""}`}

@@ -9,30 +9,30 @@
 
 :root {
   /* Graphite Dark — refined editorial */
-  --app-bg: #1A1A1F;
+  --app-bg: #17171C;
   --app-bg-a: rgba(196, 97, 58, 0.04);
   --app-bg-b: rgba(245, 240, 230, 0.02);
-  --shell-bg: #1A1A1F;
-  --shell-border: #2E2E35;
-  --panel-bg: #1A1A1F;
-  --panel-soft-bg: #212126;
-  --panel-border: #2E2E35;
-  --surface-1: #242429;
-  --surface-2: #2E2E35;
-  --surface-3: #35353D;
+  --shell-bg: #17171C;
+  --shell-border: #2A2A32;
+  --panel-bg: #17171C;
+  --panel-soft-bg: #1E1E24;
+  --panel-border: #2A2A32;
+  --surface-1: #1E1E24;
+  --surface-2: #2A2A32;
+  --surface-3: #32323B;
   --text-primary: #F5F0E6;
   --text-secondary: #C8C4BC;
   --text-muted: #9999A3;
   --accent-1: #C4613A;
   --accent-2: #E07B4C;
-  --accent-glow: rgba(196, 97, 58, 0.15);
-  --accent-glow-strong: rgba(196, 97, 58, 0.25);
-  --inbound-msg: #242429;
-  --scroll-track: #1A1A1F;
-  --scroll-thumb: #3A3A42;
-  --video-overlay: rgba(26, 26, 31, 0.95);
-  --video-border: #2E2E35;
-  --video-card-bg: #242429;
+  --accent-glow: rgba(196, 97, 58, 0.12);
+  --accent-glow-strong: rgba(196, 97, 58, 0.22);
+  --inbound-msg: #1E1E24;
+  --scroll-track: #17171C;
+  --scroll-thumb: #38383F;
+  --video-overlay: rgba(23, 23, 28, 0.95);
+  --video-border: #2A2A32;
+  --video-card-bg: #1E1E24;
   --success: #4ade80;
   --success-muted: rgba(74, 222, 128, 0.12);
 
@@ -40,12 +40,12 @@
   --cn-accent: #C4613A;
   --cn-accent2: #E07B4C;
   --cn-highlight: #C4613A;
-  --cn-border: #2E2E35;
+  --cn-border: #2A2A32;
   --cn-border-w: 1px;
   --cn-shadow: rgba(0, 0, 0, 0.2);
   --cn-shadow-lg: rgba(0, 0, 0, 0.35);
-  --cn-radius: 12px;
-  --cn-radius-lg: 16px;
+  --cn-radius: 14px;
+  --cn-radius-lg: 18px;
   --cn-font-display: 'DM Serif Display', Georgia, serif;
   --cn-font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --icon-filter: brightness(0) invert(1);
@@ -57,39 +57,39 @@
 
 html[data-theme='light'] {
   /* Graphite Light — warm stone editorial */
-  --app-bg: #D6D0C4;
-  --app-bg-a: rgba(196, 97, 58, 0.07);
-  --app-bg-b: rgba(26, 26, 31, 0.05);
-  --shell-bg: #D6D0C4;
-  --shell-border: #B0AAA0;
-  --panel-bg: #D6D0C4;
-  --panel-soft-bg: #CBC5B9;
-  --panel-border: #B0AAA0;
-  --surface-1: #E4DED2;
-  --surface-2: #CBC5B9;
-  --surface-3: #BEB8AE;
-  --text-primary: #141418;
-  --text-secondary: #2E2E36;
-  --text-muted: #4A4A54;
+  --app-bg: #D2CCC0;
+  --app-bg-a: rgba(196, 97, 58, 0.06);
+  --app-bg-b: rgba(26, 26, 31, 0.04);
+  --shell-bg: #D2CCC0;
+  --shell-border: #ACA6A0;
+  --panel-bg: #D2CCC0;
+  --panel-soft-bg: #C7C1B5;
+  --panel-border: #ACA6A0;
+  --surface-1: #E0DAD0;
+  --surface-2: #C7C1B5;
+  --surface-3: #BAB4AA;
+  --text-primary: #111115;
+  --text-secondary: #2A2A32;
+  --text-muted: #46464F;
   --accent-1: #B04E28;
   --accent-2: #CC6538;
-  --accent-glow: rgba(176, 78, 40, 0.12);
-  --accent-glow-strong: rgba(176, 78, 40, 0.24);
-  --inbound-msg: #DDD7CB;
-  --scroll-track: #D6D0C4;
-  --scroll-thumb: #A09A90;
-  --video-overlay: rgba(214, 208, 196, 0.96);
-  --video-border: #B0AAA0;
-  --video-card-bg: #DDD7CB;
+  --accent-glow: rgba(176, 78, 40, 0.10);
+  --accent-glow-strong: rgba(176, 78, 40, 0.22);
+  --inbound-msg: #D9D3C7;
+  --scroll-track: #D2CCC0;
+  --scroll-thumb: #9C968C;
+  --video-overlay: rgba(210, 204, 192, 0.96);
+  --video-border: #ACA6A0;
+  --video-card-bg: #D9D3C7;
   --success: #1a9648;
   --success-muted: rgba(26, 150, 72, 0.14);
 
   --cn-accent: #B04E28;
   --cn-accent2: #CC6538;
   --cn-highlight: #B04E28;
-  --cn-border: #B0AAA0;
-  --cn-shadow: rgba(0, 0, 0, 0.12);
-  --cn-shadow-lg: rgba(0, 0, 0, 0.22);
+  --cn-border: #ACA6A0;
+  --cn-shadow: rgba(0, 0, 0, 0.10);
+  --cn-shadow-lg: rgba(0, 0, 0, 0.18);
   --icon-filter: brightness(0);
 }
 
@@ -113,11 +113,12 @@ html, body {
   overflow-x: hidden;
   background: var(--app-bg);
   color: var(--text-primary);
+  font-family: var(--cn-font-body);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background 0.35s ease, color 0.35s ease;
+  transition: background 0.4s var(--transition-smooth), color 0.35s ease;
 }
 
 #root {
@@ -138,8 +139,8 @@ html, body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scroll-thumb);
-  border-radius: 10px;
-  transition: background 0.3s;
+  border-radius: 100px;
+  transition: background 0.25s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -148,7 +149,8 @@ html, body {
 
 :focus-visible {
   outline: 2px solid var(--cn-accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 * {
@@ -164,12 +166,14 @@ html, body {
   background: var(--video-card-bg) !important;
   border: 1px solid var(--video-border) !important;
   color: var(--text-primary) !important;
-  box-shadow: 0 20px 40px rgba(2, 8, 20, 0.28);
+  border-radius: var(--cn-radius-lg);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(255,255,255,0.04) inset;
 }
 
 #accept-btn,
 #decline-btn {
-  box-shadow: 0 10px 22px rgba(2, 8, 20, 0.2);
+  border-radius: var(--cn-radius);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
 }
 
 @media screen and (max-width: 900px) {
