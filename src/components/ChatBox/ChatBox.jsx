@@ -1235,16 +1235,19 @@ const ChatBox = () => {
         ) : null}
 
         {recording ? (
+          <>
           <div className="chat-composer recording-composer">
             <span className="recording-indicator">🔴 Recording {formatRecordingTime(recordingTime)}</span>
             <button type="button" className="input-icon cancel-record" onClick={cancelVoiceRecording} title="Cancel">✕</button>
-            <button type="button" className="send-btn" onClick={handleVoiceRecord} title="Send voice message">
-              <svg className="send-icon-svg" viewBox="0 0 24 24" fill="none">
-                <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
           </div>
+          <button type="button" className="send-btn" onClick={handleVoiceRecord} title="Send voice message">
+            <svg className="send-icon-svg" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+          </>
         ) : (
+          <>
           <div className="chat-composer">
             <button type="button" className="input-icon" onClick={() => fileInputRef.current?.click()} title="Attach file">+</button>
             <input
@@ -1276,12 +1279,13 @@ const ChatBox = () => {
             ) : null}
             <button ref={emojiButtonRef} type="button" className="input-icon"
               onClick={() => setShowEmojiPicker((p) => !p)} title="Emoji">😊</button>
-            <button type="button" className="send-btn" onClick={sendMessage} title="Send message" aria-label="Send message">
-              <svg className="send-icon-svg" viewBox="0 0 24 24" fill="none">
-                <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
           </div>
+          <button type="button" className="send-btn" onClick={sendMessage} title="Send message" aria-label="Send message">
+            <svg className="send-icon-svg" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+          </>
         )}
 
         {showEmojiPicker ? (
