@@ -162,7 +162,10 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: transparent;
+  background: linear-gradient(135deg, var(--cn-accent) 0%, var(--cn-accent2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
   padding: 14px 16px 10px;
   position: relative;
 }
@@ -175,11 +178,26 @@
   padding: 10px 14px;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   border-radius: 14px;
   margin: 2px 8px;
   border: 1px solid transparent;
+  background: linear-gradient(135deg, transparent 0%, transparent 100%);
+}
+
+.friends::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--cn-accent) 0%, var(--cn-accent2) 100%);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 1;
 }
 
 .friends img {
@@ -240,20 +258,37 @@
 }
 
 .friends:hover {
-  background: var(--surface-1);
-  border-color: var(--cn-border);
+  background: linear-gradient(
+    135deg,
+    var(--surface-1) 0%,
+    rgba(196, 97, 58, 0.04) 50%,
+    var(--surface-1) 100%
+  );
+  border-color: rgba(196, 97, 58, 0.12);
+}
+
+.friends:hover::before {
+  transform: translateY(-50%) scaleY(1);
 }
 
 .friends:hover img {
   border-color: var(--cn-accent);
 }
 
+.friends:active {
+  transform: scale(0.99);
+}
+
 /* ── Selected state ── */
 .friends.border {
   background: linear-gradient(135deg, var(--cn-accent) 0%, var(--cn-accent2) 100%);
   border-radius: 12px;
-  box-shadow: 0 4px 20px var(--accent-glow-strong);
+  box-shadow: 0 4px 20px var(--accent-glow-strong), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transform: scale(1.01);
+}
+
+.friends.border::before {
+  display: none;
 }
 
 .friends.border div p {
@@ -274,8 +309,16 @@
 }
 
 .friends.add-user {
-  background: var(--surface-1);
+  background: linear-gradient(
+    135deg,
+    var(--surface-1) 0%,
+    rgba(196, 97, 58, 0.05) 100%
+  );
   border-bottom: 1px solid var(--cn-border);
+}
+
+.friends.add-user::before {
+  transform: translateY(-50%) scaleY(1);
 }
 
 @media (max-width:900px) {
@@ -295,11 +338,21 @@ html[data-theme='light'] .ls-search {
 }
 
 html[data-theme='light'] .friends:hover {
-  background: #DDD7CB;
+  background: linear-gradient(
+    135deg,
+    #DDD7CB 0%,
+    rgba(176, 78, 40, 0.06) 50%,
+    #DDD7CB 100%
+  );
+  border-color: rgba(176, 78, 40, 0.12);
 }
 
 html[data-theme='light'] .friends.add-user {
-  background: #DDD7CB;
+  background: linear-gradient(
+    135deg,
+    #DDD7CB 0%,
+    rgba(176, 78, 40, 0.05) 100%
+  );
 }
 
 html[data-theme='light'] .friend-status.offline {
@@ -597,7 +650,11 @@ html[data-theme='light'] .friend-status.offline {
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--cn-border);
-  transition: border-color 0.2s;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.friends:hover .friend-avatar-wrap img {
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .online-dot {
@@ -669,7 +726,7 @@ html[data-theme='light'] .friend-status.offline {
 
 /* ── Unread badge ── */
 .unread-badge {
-  background: var(--cn-accent);
+  background: linear-gradient(135deg, var(--cn-accent) 0%, var(--cn-accent2) 100%);
   color: #F5F0E6;
   font-family: var(--cn-font-body);
   font-size: 10px;
@@ -678,10 +735,21 @@ html[data-theme='light'] .friend-status.offline {
   border-radius: 10px;
   flex-shrink: 0;
   line-height: 1.3;
+  box-shadow: 0 2px 8px var(--accent-glow);
 }
 
 .friends.has-unread {
-  background: var(--surface-1);
+  background: linear-gradient(
+    135deg,
+    var(--surface-1) 0%,
+    rgba(196, 97, 58, 0.06) 60%,
+    var(--surface-1) 100%
+  );
+  border-color: rgba(196, 97, 58, 0.08);
+}
+
+.friends.has-unread::before {
+  transform: translateY(-50%) scaleY(1);
 }
 
 .friends.has-unread .friend-name {
@@ -696,8 +764,13 @@ html[data-theme='light'] .friend-status.offline {
 /* ── Active chat highlight ── */
 .friends.active {
   background: linear-gradient(135deg, var(--cn-accent) 0%, var(--cn-accent2) 100%);
-  box-shadow: 0 4px 16px var(--accent-glow-strong);
+  box-shadow: 0 4px 20px var(--accent-glow-strong), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   border-radius: 14px;
+  border-color: transparent;
+}
+
+.friends.active::before {
+  display: none;
 }
 
 .friends.active .friend-name {
@@ -784,7 +857,13 @@ html[data-theme='light'] .group-member-item.selected {
 }
 
 html[data-theme='light'] .friends.has-unread {
-  background: #DDD7CB;
+  background: linear-gradient(
+    135deg,
+    #DDD7CB 0%,
+    rgba(176, 78, 40, 0.07) 60%,
+    #DDD7CB 100%
+  );
+  border-color: rgba(176, 78, 40, 0.10);
 }
 
 html[data-theme='light'] .online-dot {
