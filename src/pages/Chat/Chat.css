@@ -26,7 +26,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 24px;
+  padding: 0 20px;
   height: 52px;
   border-bottom: none;
   background: var(--panel-bg);
@@ -43,8 +43,8 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, var(--cn-accent) 0%, var(--cn-accent2) 30%, var(--cn-border) 60%, transparent 100%);
-  opacity: 0.5;
+  background: linear-gradient(90deg, var(--cn-accent) 0%, var(--cn-accent2) 40%, var(--cn-border) 70%, transparent 100%);
+  opacity: 0.45;
 }
 
 .chat-shell-title {
@@ -81,15 +81,21 @@
   content: '';
   position: absolute;
   inset: 0;
+  border-radius: 10px;
   background: linear-gradient(135deg, var(--cn-accent) 0%, var(--cn-accent2) 100%);
   opacity: 0;
   transition: opacity 0.3s;
 }
 
+.theme-toggle > * {
+  position: relative;
+  z-index: 1;
+}
+
 .theme-toggle:hover {
   color: #F5F0E6;
   border-color: var(--cn-accent);
-  box-shadow: 0 4px 16px var(--accent-glow-strong);
+  box-shadow: 0 4px 16px var(--accent-glow-strong), inset 0 1px 0 rgba(255,255,255,0.08);
   transform: translateY(-1px);
 }
 
@@ -98,7 +104,7 @@
 }
 
 .theme-toggle:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.97);
 }
 
 .chat-container {
@@ -178,7 +184,7 @@ html[data-theme='light'] .chat-shell {
 }
 
 html[data-theme='light'] .theme-toggle {
-  background: #DDD7CB;
+  background: #D9D3C7;
 }
 
 html[data-theme='light'] .chat-shell-header::after {
