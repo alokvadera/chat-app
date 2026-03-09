@@ -139,10 +139,9 @@
 
 /* ── Logout ── */
 .rs .logout-btn {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  margin-top: auto;
+  align-self: center;
+  flex-shrink: 0;
   background: linear-gradient(135deg, var(--cn-accent) 0%, var(--cn-accent2) 100%);
   color: #F5F0E6;
   border: none;
@@ -157,6 +156,7 @@
   letter-spacing: 0.02em;
   position: relative;
   overflow: hidden;
+  margin-bottom: 20px;
 }
 
 .rs .logout-btn::after {
@@ -176,21 +176,22 @@
 }
 
 .rs .logout-btn:hover {
-  transform: translateX(-50%) translateY(-2px);
+  transform: translateY(-2px);
   box-shadow: 0 8px 28px var(--accent-glow-strong), inset 0 1px 0 rgba(255,255,255,0.12);
 }
 
 .rs .logout-btn:active {
-  transform: translateX(-50%) translateY(0) scale(0.97);
+  transform: translateY(0) scale(0.97);
 }
 
 /* ── Info panel ── */
 .rs-info-panel {
-  padding: 0 16px 88px;
+  padding: 0 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   flex: 1;
+  min-height: 0;
 }
 
 .rs-info-head {
