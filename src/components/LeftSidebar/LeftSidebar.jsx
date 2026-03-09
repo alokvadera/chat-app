@@ -42,6 +42,7 @@ const LeftSidebar = () => {
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [chatOptionsMenu, setChatOptionsMenu] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const searchDebounceRef = useRef(null);
   const latestSearchTokenRef = useRef(0);
   const searchInputRef = useRef(null);
@@ -217,7 +218,7 @@ const LeftSidebar = () => {
         await appendChatForUser(memberId, {
           messageId: newMessageId,
           lastMessage: "",
-          rId: newMessageId, // For groups, rId = group thread id
+          rId: newMessageId,
           updatedAt: Date.now(),
           messageSeen: true,
           unreadCount: 0,
@@ -225,6 +226,7 @@ const LeftSidebar = () => {
           groupName: groupName.trim(),
           groupAvatar: "",
           groupMembers: allMembers,
+          createdBy: userData.id,
         });
       }
 
@@ -290,7 +292,7 @@ const LeftSidebar = () => {
     }
   };
 
-  // ─── Remove chat from current user's list ─────────────────────────────
+  // ─── Remove 1:1 chat from current user's list ────────────────────────
   const removeChatForMe = async (item) => {
     try {
       if (isDesignPreviewMode) { notificationHelper.info("Disabled in preview mode."); return; }
@@ -307,7 +309,6 @@ const LeftSidebar = () => {
       );
       await supabase.from("chats").update({ chats_data: updated }).eq("id", userData.id);
 
-      // If the removed chat was active, clear the view
       if (messagesId === msgId) {
         setChatUser(null);
         setMessagesId("");
@@ -320,30 +321,84 @@ const LeftSidebar = () => {
     }
   };
 
-  // ─── Delete group for everyone ────────────────────────────────────────
+  // ─── Leave group: remove self + update other members' groupMembers ────
+  const leaveGroup = async (item) => {
+    try {
+      if (isDesignPreviewMode) { notificationHelper.info("Disabled in preview mode."); return; }
+      const msgId = getMessageId(item);
+      if (!msgId || !userData?.id) return;
+
+      const members = (item.groupMembers || []).filter((id) => id !== userData.id);
+
+      // Remove group from current user's chats_data
+      const { data: myRows } = await supabase
+        .from("chats").select("chats_data").eq("id", userData.id).limit(1);
+      const myRow = myRows?.[0];
+      if (myRow) {
+        const updated = (myRow.chats_data || []).filter((c) => getMessageId(c) !== msgId);
+        await supabase.from("chats").update({ chats_data: updated }).eq("id", userData.id);
+      }
+
+      // Remove current user from groupMembers in remaining members' data
+      await Promise.allSettled(
+        members.map(async (memberId) => {
+          const { data: rows } = await supabase
+            .from("chats").select("chats_data").eq("id", memberId).limit(1);
+          const row = rows?.[0];
+          if (!row) return;
+          const chats = (row.chats_data || []).map((c) => {
+            if (getMessageId(c) !== msgId) return c;
+            return {
+              ...c,
+              groupMembers: (c.groupMembers || []).filter((id) => id !== userData.id),
+            };
+          });
+          await supabase.from("chats").update({ chats_data: chats }).eq("id", memberId);
+        }),
+      );
+
+      if (messagesId === msgId) {
+        setChatUser(null);
+        setMessagesId("");
+        setMessages([]);
+        setChatVisible(false);
+      }
+      notificationHelper.success(`Left "${item.groupName || "Group"}".`);
+    } catch (error) {
+      notificationHelper.error(toUserErrorMessage(error));
+    }
+  };
+
+  // ─── Delete group for everyone (creator only) ─────────────────────────
   const deleteGroupForEveryone = async (item) => {
     try {
       if (isDesignPreviewMode) { notificationHelper.info("Disabled in preview mode."); return; }
       const msgId = getMessageId(item);
-      const members = item.groupMembers || [];
       if (!msgId) return;
 
-      // Remove group entry from every member's chats_data
-      for (const memberId of members) {
-        const { data: rows } = await supabase
-          .from("chats").select("chats_data").eq("id", memberId).limit(1);
-        const row = rows?.[0];
-        if (!row) continue;
-        const updated = (row.chats_data || []).filter(
-          (c) => getMessageId(c) !== msgId,
-        );
-        await supabase.from("chats").update({ chats_data: updated }).eq("id", memberId);
+      if (item.createdBy && item.createdBy !== userData?.id) {
+        notificationHelper.error("Only the group creator can delete this group.");
+        return;
       }
 
-      // Delete the messages row
+      // Ensure current user is included in cleanup
+      const members = item.groupMembers || [];
+      const allIds = [...new Set([...members, userData.id])];
+
+      // Remove group entry from every member's chats_data in parallel
+      await Promise.allSettled(
+        allIds.map(async (memberId) => {
+          const { data: rows } = await supabase
+            .from("chats").select("chats_data").eq("id", memberId).limit(1);
+          const row = rows?.[0];
+          if (!row) return;
+          const updated = (row.chats_data || []).filter((c) => getMessageId(c) !== msgId);
+          await supabase.from("chats").update({ chats_data: updated }).eq("id", memberId);
+        }),
+      );
+
       await supabase.from("messages").delete().eq("id", msgId);
 
-      // If this was the active chat, clear
       if (messagesId === msgId) {
         setChatUser(null);
         setMessagesId("");
@@ -516,10 +571,10 @@ const LeftSidebar = () => {
                 </div>
                 {isMenuOpen ? (
                   <div className="chat-options-menu" onClick={(e) => e.stopPropagation()}>
-                    <button type="button" onClick={() => { setChatOptionsMenu(null); setConfirmAction({ type: "remove", item }); }}>
+                    <button type="button" onClick={() => { setChatOptionsMenu(null); setConfirmAction({ type: isGroup ? "leaveGroup" : "remove", item }); }}>
                       {isGroup ? "Leave Group" : "Remove Chat"}
                     </button>
-                    {isGroup ? (
+                    {isGroup && item.createdBy === userData?.id ? (
                       <button type="button" className="danger" onClick={() => { setChatOptionsMenu(null); setConfirmAction({ type: "deleteGroup", item }); }}>
                         Delete Group
                       </button>
@@ -534,35 +589,49 @@ const LeftSidebar = () => {
 
       {/* Confirmation dialog */}
       {confirmAction ? (
-        <div className="confirm-overlay" onClick={() => setConfirmAction(null)}>
+        <div className="confirm-overlay" onClick={() => { if (!isProcessing) setConfirmAction(null); }}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
             <p className="confirm-title">
-              {confirmAction.type === "deleteGroup" ? "Delete Group" : confirmAction.item?.isGroup ? "Leave Group" : "Remove Chat"}
+              {confirmAction.type === "deleteGroup" ? "Delete Group" : confirmAction.type === "leaveGroup" ? "Leave Group" : "Remove Chat"}
             </p>
             <p className="confirm-text">
               {confirmAction.type === "deleteGroup"
-                ? `This will permanently delete "${confirmAction.item?.groupName || "Group"}" for all members.`
-                : confirmAction.item?.isGroup
-                  ? `Leave "${confirmAction.item?.groupName || "Group"}"? You won't see it in your chat list anymore.`
+                ? `This will permanently delete "${confirmAction.item?.groupName || "Group"}" and all messages for every member.`
+                : confirmAction.type === "leaveGroup"
+                  ? `Leave "${confirmAction.item?.groupName || "Group"}"? You'll be removed from the member list.`
                   : `Remove this chat from your list?`}
             </p>
             <div className="confirm-actions">
               <button
                 type="button"
                 className={`confirm-btn ${confirmAction.type === "deleteGroup" ? "danger" : ""}`}
+                disabled={isProcessing}
                 onClick={async () => {
                   const action = confirmAction;
-                  setConfirmAction(null);
-                  if (action.type === "deleteGroup") {
-                    await deleteGroupForEveryone(action.item);
-                  } else {
-                    await removeChatForMe(action.item);
+                  setIsProcessing(true);
+                  try {
+                    if (action.type === "deleteGroup") {
+                      await deleteGroupForEveryone(action.item);
+                    } else if (action.type === "leaveGroup") {
+                      await leaveGroup(action.item);
+                    } else {
+                      await removeChatForMe(action.item);
+                    }
+                  } finally {
+                    setIsProcessing(false);
+                    setConfirmAction(null);
                   }
                 }}
               >
-                {confirmAction.type === "deleteGroup" ? "Delete for Everyone" : "Remove"}
+                {isProcessing
+                  ? "Processing..."
+                  : confirmAction.type === "deleteGroup"
+                    ? "Delete for Everyone"
+                    : confirmAction.type === "leaveGroup"
+                      ? "Leave"
+                      : "Remove"}
               </button>
-              <button type="button" className="confirm-cancel" onClick={() => setConfirmAction(null)}>Cancel</button>
+              <button type="button" className="confirm-cancel" disabled={isProcessing} onClick={() => setConfirmAction(null)}>Cancel</button>
             </div>
           </div>
         </div>
