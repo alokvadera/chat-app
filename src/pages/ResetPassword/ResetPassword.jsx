@@ -56,7 +56,7 @@ const ResetPassword = () => {
 
         if (!session?.user) {
           notify.error("Invalid or expired reset link. Request a new one.");
-          navigate("/", { replace: true });
+          navigate("/auth", { replace: true });
           return;
         }
 
@@ -64,7 +64,7 @@ const ResetPassword = () => {
       } catch (error) {
         if (!isMounted) return;
         notify.error(toUserErrorMessage(error));
-        navigate("/", { replace: true });
+        navigate("/auth", { replace: true });
       }
     };
 
@@ -93,7 +93,7 @@ const ResetPassword = () => {
     try {
       if (isDesignPreviewMode) {
         notify.success("Password updated in preview mode.");
-        navigate("/", { replace: true });
+        navigate("/auth", { replace: true });
         return;
       }
 
@@ -102,7 +102,7 @@ const ResetPassword = () => {
 
       notify.success("Password updated. Please login with your new password.");
       await supabase.auth.signOut();
-      navigate("/", { replace: true });
+      navigate("/auth", { replace: true });
     } catch (error) {
       notify.error(toUserErrorMessage(error));
     } finally {

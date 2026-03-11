@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="fg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C4613A"/>
+      <stop offset="100%" stop-color="#E07B4C"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded chat bubble -->
+  <rect x="3" y="4" width="26" height="18" rx="9" fill="url(#fg)"/>
+  <polygon points="9,22 14,22 10,27" fill="url(#fg)"/>
+  <!-- Three dots (ellipsis) -->
+  <circle cx="11" cy="13" r="2" fill="#F5F0E6"/>
+  <circle cx="16" cy="13" r="2" fill="#F5F0E6"/>
+  <circle cx="21" cy="13" r="2" fill="#F5F0E6"/>
+</svg>

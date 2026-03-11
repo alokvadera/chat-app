@@ -228,7 +228,7 @@ export const signup = async (username, email, password) => {
       "Signup request timed out. Please check network and try again.",
     );
     if (error) throw error;
-
+    //google-site-verification=bZyZnDJUB6AXIZDHC9qHAcF1xzVypeDpClRrMJHrn8M
     const user = data.user;
     if (!user) throw new Error("Signup failed - no user returned");
     const hasSession = Boolean(data.session);
@@ -244,11 +244,15 @@ export const signup = async (username, email, password) => {
     }
 
     if (hasSession) {
-      notificationHelper.success("Account created. Continue to complete your profile.");
+      notificationHelper.success(
+        "Account created. Continue to complete your profile.",
+      );
       return { ok: true, needsEmailVerification: false, user };
     }
 
-    notificationHelper.success("Account created. Please verify email, then login.");
+    notificationHelper.success(
+      "Account created. Please verify email, then login.",
+    );
     return { ok: true, needsEmailVerification: true, user };
   } catch (error) {
     logDevError("Signup failed:", error);

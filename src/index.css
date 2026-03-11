@@ -1,50 +1,106 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 :root {
-  --app-bg: #03060e;
-  --app-bg-a: rgba(0, 94, 255, 0.19);
-  --app-bg-b: rgba(28, 47, 156, 0.23);
-  --shell-bg: linear-gradient(160deg, rgba(10, 14, 24, 0.93), rgba(5, 7, 14, 0.96));
-  --shell-border: rgba(255, 255, 255, 0.09);
-  --panel-bg: rgba(0, 0, 0, 0.56);
-  --panel-soft-bg: rgba(2, 5, 12, 0.78);
-  --panel-border: rgba(255, 255, 255, 0.08);
-  --surface-1: rgba(255, 255, 255, 0.06);
-  --surface-2: rgba(255, 255, 255, 0.1);
-  --text-primary: #ffffff;
-  --text-muted: rgba(255, 255, 255, 0.7);
-  --accent-1: #0078ff;
-  --accent-2: #2f92ff;
-  --inbound-msg: rgba(255, 255, 255, 0.12);
-  --scroll-track: #1a1a1a;
-  --scroll-thumb: #333;
+  /* Graphite Dark — refined editorial */
+  --app-bg: #17171C;
+  --app-bg-a: rgba(196, 97, 58, 0.04);
+  --app-bg-b: rgba(245, 240, 230, 0.02);
+  --shell-bg: #17171C;
+  --shell-border: #2A2A32;
+  --panel-bg: #17171C;
+  --panel-soft-bg: #1E1E24;
+  --panel-border: #2A2A32;
+  --surface-1: #1E1E24;
+  --surface-2: #2A2A32;
+  --surface-3: #32323B;
+  --text-primary: #F5F0E6;
+  --text-secondary: #C8C4BC;
+  --text-muted: #9999A3;
+  --accent-1: #C4613A;
+  --accent-2: #E07B4C;
+  --accent-glow: rgba(196, 97, 58, 0.12);
+  --accent-glow-strong: rgba(196, 97, 58, 0.22);
+  --inbound-msg: #1E1E24;
+  --scroll-track: #17171C;
+  --scroll-thumb: #38383F;
+  --video-overlay: rgba(23, 23, 28, 0.95);
+  --video-border: #2A2A32;
+  --video-card-bg: #1E1E24;
+  --success: #4ade80;
+  --success-muted: rgba(74, 222, 128, 0.12);
+
+  /* Graphite design tokens */
+  --cn-accent: #C4613A;
+  --cn-accent2: #E07B4C;
+  --cn-highlight: #C4613A;
+  --cn-border: #2A2A32;
+  --cn-border-w: 1px;
+  --cn-shadow: rgba(0, 0, 0, 0.2);
+  --cn-shadow-lg: rgba(0, 0, 0, 0.35);
+  --cn-radius: 14px;
+  --cn-radius-lg: 18px;
+  --cn-font-display: 'DM Serif Display', Georgia, serif;
+  --cn-font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --icon-filter: brightness(0) invert(1);
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 html[data-theme='light'] {
-  --app-bg: #eef3fb;
-  --app-bg-a: rgba(0, 104, 255, 0.15);
-  --app-bg-b: rgba(92, 125, 255, 0.13);
-  --shell-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.97), rgba(245, 248, 255, 0.98));
-  --shell-border: rgba(41, 70, 128, 0.16);
-  --panel-bg: rgba(255, 255, 255, 0.78);
-  --panel-soft-bg: rgba(255, 255, 255, 0.8);
-  --panel-border: rgba(55, 93, 170, 0.16);
-  --surface-1: rgba(33, 72, 151, 0.08);
-  --surface-2: rgba(33, 72, 151, 0.14);
-  --text-primary: #102043;
-  --text-muted: rgba(16, 32, 67, 0.7);
-  --accent-1: #0e74ff;
-  --accent-2: #2f92ff;
-  --inbound-msg: rgba(34, 74, 155, 0.12);
-  --scroll-track: #dfe7f6;
-  --scroll-thumb: #8ca4d9;
+  /* Graphite Light — warm stone editorial */
+  --app-bg: #D2CCC0;
+  --app-bg-a: rgba(196, 97, 58, 0.06);
+  --app-bg-b: rgba(26, 26, 31, 0.04);
+  --shell-bg: #D2CCC0;
+  --shell-border: #ACA6A0;
+  --panel-bg: #D2CCC0;
+  --panel-soft-bg: #C7C1B5;
+  --panel-border: #ACA6A0;
+  --surface-1: #E0DAD0;
+  --surface-2: #C7C1B5;
+  --surface-3: #BAB4AA;
+  --text-primary: #111115;
+  --text-secondary: #2A2A32;
+  --text-muted: #46464F;
+  --accent-1: #B04E28;
+  --accent-2: #CC6538;
+  --accent-glow: rgba(176, 78, 40, 0.10);
+  --accent-glow-strong: rgba(176, 78, 40, 0.22);
+  --inbound-msg: #D9D3C7;
+  --scroll-track: #D2CCC0;
+  --scroll-thumb: #9C968C;
+  --video-overlay: rgba(210, 204, 192, 0.96);
+  --video-border: #ACA6A0;
+  --video-card-bg: #D9D3C7;
+  --success: #1a9648;
+  --success-muted: rgba(26, 150, 72, 0.14);
+
+  --cn-accent: #B04E28;
+  --cn-accent2: #CC6538;
+  --cn-highlight: #B04E28;
+  --cn-border: #ACA6A0;
+  --cn-shadow: rgba(0, 0, 0, 0.10);
+  --cn-shadow-lg: rgba(0, 0, 0, 0.18);
+  --icon-filter: brightness(0);
+}
+
+::selection {
+  background: var(--cn-accent);
+  color: #F5F0E6;
+}
+
+::-moz-selection {
+  background: var(--cn-accent);
+  color: #F5F0E6;
 }
 
 html, body {
@@ -57,10 +113,12 @@ html, body {
   overflow-x: hidden;
   background: var(--app-bg);
   color: var(--text-primary);
+  font-family: var(--cn-font-body);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background 0.4s var(--transition-smooth), color 0.35s ease;
 }
 
 #root {
@@ -71,26 +129,51 @@ html, body {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--scroll-track);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--scroll-thumb);
-  border-radius: 3px;
+  border-radius: 100px;
+  transition: background 0.25s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #444;
+  background: var(--cn-accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cn-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+
+#video-call-root {
+  background: var(--video-overlay) !important;
+}
+
+#call-invite-modal {
+  background: var(--video-card-bg) !important;
+  border: 1px solid var(--video-border) !important;
+  color: var(--text-primary) !important;
+  border-radius: var(--cn-radius-lg);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(255,255,255,0.04) inset;
+}
+
+#accept-btn,
+#decline-btn {
+  border-radius: var(--cn-radius);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
 }
 
 @media screen and (max-width: 900px) {

@@ -74,8 +74,6 @@ const PREVIEW_CHAT = {
 
 const isDev = import.meta.env.DEV;
 const ONLINE_WINDOW_MS = 70000;
-const PRESENCE_HEARTBEAT_MS = 25000;
-const PRESENCE_WRITE_DEBOUNCE_MS = 10000;
 const logWarn = (...args) => {
   if (isDev) console.warn(...args);
 };
@@ -160,9 +158,10 @@ const AppContextProvider = (props) => {
   const [chatUser, setChatUser] = useState(null);
   const [chatVisible, setChatVisible] = useState(false);
   const [chatInfoPanelOpen, setChatInfoPanelOpen] = useState(false);
+  const [presenceUsers, setPresenceUsers] = useState({});
   const callChannelRef = useRef(null);
   const callChannelReadyRef = useRef(false);
-  const lastPresenceUpdateRef = useRef(0);
+  const presenceChannelRef = useRef(null);
   const preferenceColumnsUnsupportedRef = useRef(false);
 
   const clearAppState = useCallback(() => {
@@ -173,6 +172,7 @@ const AppContextProvider = (props) => {
     setChatUser(null);
     setChatVisible(false);
     setChatInfoPanelOpen(false);
+    setPresenceUsers({});
   }, []);
 
   const updateCurrentUserPreferences = useCallback(async (preferences = {}) => {
@@ -255,48 +255,25 @@ const AppContextProvider = (props) => {
     lastMessage: String(item?.lastMessage ?? item?.last_message ?? ""),
     updatedAt: parseTimestamp(item?.updatedAt ?? item?.updated_at),
     messageSeen: Boolean(item?.messageSeen ?? item?.message_seen ?? true),
+    unreadCount: Number(item?.unreadCount || 0),
+    isGroup: Boolean(item?.isGroup),
+    groupName: item?.groupName || "",
+    groupAvatar: item?.groupAvatar || "",
+    groupMembers: Array.isArray(item?.groupMembers) ? item.groupMembers : [],
   });
 
   const isUserOnline = useCallback((targetUser) => {
+    const targetId = String(targetUser?.id || "").trim();
+    if (targetId && presenceUsers[targetId]) {
+      return true;
+    }
     if (String(targetUser?.profile_visibility || "public") === "private") {
       return false;
     }
     const lastSeen = Number(targetUser?.last_seen || 0);
     if (!lastSeen) return false;
     return Date.now() - lastSeen <= ONLINE_WINDOW_MS;
-  }, []);
-
-  const writePresence = useCallback(async (force = false) => {
-    if (isDesignPreviewMode) return;
-    const currentUserId = String(userData?.id || "").trim();
-    if (!currentUserId) return;
-    if (String(userData?.profile_visibility || "public") === "private") {
-      if (!force) return;
-      const { error } = await supabase
-        .from("users")
-        .update({ last_seen: 0 })
-        .eq("id", currentUserId);
-      if (error && isDev) {
-        logWarn("writePresence(private) error:", error.message || error);
-      }
-      return;
-    }
-
-    const now = Date.now();
-    if (!force && now - lastPresenceUpdateRef.current < PRESENCE_WRITE_DEBOUNCE_MS) {
-      return;
-    }
-    lastPresenceUpdateRef.current = now;
-
-    const { error } = await supabase
-      .from("users")
-      .update({ last_seen: now })
-      .eq("id", currentUserId);
-
-    if (error && isDev) {
-      logWarn("writePresence error:", error.message || error);
-    }
-  }, [userData?.id, userData?.profile_visibility]);
+  }, [presenceUsers]);
 
   const loadUserData = useCallback(async (uid, authUser = null, options = {}) => {
     try {
@@ -384,47 +361,58 @@ const AppContextProvider = (props) => {
         }
       }
 
-      void writePresence(true);
     } catch (error) {
       logError("loadUserData error:", error);
       notificationHelper.error(toUserErrorMessage(error));
     }
-  }, [navigate, writePresence]);
+  }, [navigate]);
 
   useEffect(() => {
     if (isDesignPreviewMode) return;
-    if (!userData?.id) return;
 
-    void writePresence(true);
-    const intervalId = setInterval(() => {
-      void writePresence();
-    }, PRESENCE_HEARTBEAT_MS);
+    const currentUserId = String(userData?.id || "").trim();
+    if (!currentUserId) return;
 
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        void writePresence(true);
-      }
+    const channel = supabase.channel("online-users", {
+      config: {
+        presence: { key: currentUserId },
+      },
+    });
+
+    const syncPresenceState = () => {
+      const nextPresence = channel.presenceState();
+      console.log("presence state", nextPresence);
+
+      const nextUsers = {};
+      Object.entries(nextPresence).forEach(([key, entries]) => {
+        if (Array.isArray(entries) && entries.length > 0) {
+          nextUsers[key] = true;
+        }
+      });
+      setPresenceUsers(nextUsers);
     };
 
-    const onWindowFocus = () => {
-      void writePresence(true);
-    };
+    channel
+      .on("presence", { event: "sync" }, syncPresenceState)
+      .on("presence", { event: "join" }, syncPresenceState)
+      .on("presence", { event: "leave" }, syncPresenceState)
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({
+            user_id: currentUserId,
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
 
-    const onBeforeUnload = () => {
-      void writePresence(true);
-    };
-
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("focus", onWindowFocus);
-    window.addEventListener("beforeunload", onBeforeUnload);
+    presenceChannelRef.current = channel;
 
     return () => {
-      clearInterval(intervalId);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("focus", onWindowFocus);
-      window.removeEventListener("beforeunload", onBeforeUnload);
+      presenceChannelRef.current = null;
+      setPresenceUsers({});
+      supabase.removeChannel(channel);
     };
-  }, [userData?.id, writePresence]);
+  }, [userData?.id]);
 
   useEffect(() => {
     if (isDesignPreviewMode) return;
@@ -445,7 +433,12 @@ const AppContextProvider = (props) => {
         return;
       }
 
-      const peerIds = [...new Set(normalizedChats.map((item) => item.rId))];
+      // Only look up users for non-group chats
+      const peerIds = [...new Set(
+        normalizedChats
+          .filter((item) => !item.isGroup)
+          .map((item) => item.rId),
+      )];
       const usersById = new Map();
 
       if (peerIds.length) {
@@ -466,13 +459,28 @@ const AppContextProvider = (props) => {
       if (!isActive) return;
 
       const hydratedChats = normalizedChats
-        .map((item) => ({
-          ...item,
-          userData: normalizeUserPreferences(
-            usersById.get(item.rId) || fallbackChatUser(item.rId),
-            getUserPreferencesFromStorage(item.rId),
-          ),
-        }))
+        .map((item) => {
+          if (item.isGroup) {
+            return {
+              ...item,
+              userData: {
+                id: item.rId,
+                name: item.groupName || "Group",
+                avatar: item.groupAvatar || "",
+                bio: `${(item.groupMembers || []).length} members`,
+                last_seen: Date.now(),
+                profile_visibility: "public",
+              },
+            };
+          }
+          return {
+            ...item,
+            userData: normalizeUserPreferences(
+              usersById.get(item.rId) || fallbackChatUser(item.rId),
+              getUserPreferencesFromStorage(item.rId),
+            ),
+          };
+        })
         .sort((a, b) => b.updatedAt - a.updatedAt);
 
       setChatData(hydratedChats);
@@ -752,6 +760,7 @@ const AppContextProvider = (props) => {
     isUserOnline,
     updateCurrentUserPreferences,
     clearAppState,
+    presenceUsers,
   }), [
     userData,
     chatData,
@@ -765,6 +774,7 @@ const AppContextProvider = (props) => {
     isUserOnline,
     updateCurrentUserPreferences,
     clearAppState,
+    presenceUsers,
   ]);
 
   return (
