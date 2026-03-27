@@ -6,7 +6,7 @@ import {
   toUserErrorMessage,
 } from "../config/supabase";
 import { setKnownUser } from "../lib/knownUser";
-import { startVideoSession } from "../lib/zegoCall";
+import { startVideoSession, initializePeerForIncoming } from "../lib/peerCall";
 import {
   getUserPreferencesFromStorage,
   normalizeUserPreferences,
@@ -739,6 +739,21 @@ const AppContextProvider = (props) => {
       supabase.removeChannel(callChannel);
     };
   }, [userData]);
+
+  useEffect(() => {
+    if (!userData?.id || isDesignPreviewMode) return;
+
+    const initPeer = async () => {
+      try {
+        await initializePeerForIncoming(userData.id);
+        console.log("Peer initialized for incoming calls");
+      } catch (error) {
+        console.error("Failed to initialize peer:", error);
+      }
+    };
+
+    initPeer();
+  }, [userData?.id]);
 
   const value = useMemo(() => ({
     userData,
