@@ -13,11 +13,145 @@ let isAudioMuted = false;
 let isVideoOff = false;
 let peerConnectionState = 'disconnected';
 let onCallStateChangeCallback = null;
+let ringtoneInterval = null;
+let audioContext = null;
+
+const CALL_STORAGE_KEY = 'chat_app_active_call';
 
 const getPeerId = (userId) => `chat-app-${userId}`;
 
 const CALL_TIMEOUT_MS = 30000;
 const RECONNECT_DELAY_MS = 3000;
+
+export const saveCallState = (state) => {
+  try {
+    sessionStorage.setItem(CALL_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.log('Could not save call state:', e);
+  }
+};
+
+export const getSavedCallState = () => {
+  try {
+    const saved = sessionStorage.getItem(CALL_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch (e) {
+    console.log('Could not get call state:', e);
+    return null;
+  }
+};
+
+export const clearSavedCallState = () => {
+  try {
+    sessionStorage.removeItem(CALL_STORAGE_KEY);
+  } catch (e) {
+    console.log('Could not clear call state:', e);
+  }
+};
+
+const createAudioContext = () => {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioContext;
+};
+
+const playRingtone = () => {
+  try {
+    const ctx = createAudioContext();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.value = 440;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.5);
+  } catch (e) {
+    console.log('Could not play ringtone:', e);
+  }
+};
+
+const startRingtone = () => {
+  stopRingtone();
+  ringtoneInterval = setInterval(playRingtone, 1000);
+};
+
+const stopRingtone = () => {
+  if (ringtoneInterval) {
+    clearInterval(ringtoneInterval);
+    ringtoneInterval = null;
+  }
+};
+
+const playConnectSound = () => {
+  try {
+    const ctx = createAudioContext();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.3);
+  } catch (e) {
+    console.log('Could not play connect sound:', e);
+  }
+};
+
+const requestNotificationPermission = async () => {
+  if (!("Notification" in window)) {
+    console.log('This browser does not support notifications');
+    return false;
+  }
+  
+  if (Notification.permission === "granted") {
+    return true;
+  }
+  
+  if (Notification.permission !== "denied") {
+    const permission = await Notification.requestPermission();
+    return permission === "granted";
+  }
+  
+  return false;
+};
+
+const showBrowserNotification = (title, body, icon = null) => {
+  if (!("Notification" in window)) return;
+  
+  if (Notification.permission === "granted") {
+    new Notification(title, {
+      body,
+      icon: icon || '/favicon.svg',
+      tag: 'call-notification',
+      requireInteraction: true,
+    });
+  }
+};
+
+export const showIncomingCallNotification = async (callerName, callType) => {
+  const hasPermission = await requestNotificationPermission();
+  if (hasPermission) {
+    showBrowserNotification(
+      'Incoming Call',
+      `${callerName} is calling you (${callType})`,
+    );
+  }
+};
 
 export const initializePeer = async (userId) => {
   const peerId = getPeerId(userId);
@@ -81,6 +215,7 @@ export const initializePeerForIncoming = async (userId) => {
         console.log('Incoming call from:', call.peer);
         
         clearTimeout(callTimeoutTimeout);
+        startRingtone();
         
         currentCallData = {
           call,
@@ -91,9 +226,20 @@ export const initializePeerForIncoming = async (userId) => {
         
         updateCallState('ringing');
         
+        const callerName = call.peer.replace('chat-app-', '');
+        
+        saveCallState({
+          type: 'incoming',
+          callerPeerId: call.peer,
+          callerName,
+          callType: currentCallData.callType,
+          startTime: Date.now(),
+        });
+        
+        showIncomingCallNotification(callerName, currentCallData.callType);
+        
         const container = ensureCallContainer();
         
-        const callerName = call.peer.replace('chat-app-', '');
         container.innerHTML = buildIncomingCallHTML(callerName, currentCallData.callType);
         
         container.style.display = "flex";
@@ -164,12 +310,15 @@ const setupIncomingCallHandlers = (call) => {
     acceptBtn.onclick = async () => {
       try {
         clearTimeout(callTimeoutTimeout);
+        stopRingtone();
+        playConnectSound();
         const { localStream: stream } = await answerCall(call, currentCallData.callType);
         currentCallData.localStream = stream;
         currentCallData.startTime = Date.now();
         startCallTimer();
         showActiveCallUI(call, stream);
         updateCallState('connected');
+        clearSavedCallState();
       } catch (error) {
         console.error('Error answering call:', error);
         call.close();
@@ -181,6 +330,7 @@ const setupIncomingCallHandlers = (call) => {
   
   if (declineBtn) {
     declineBtn.onclick = () => {
+      stopRingtone();
       call.close();
       hideCallUI();
       updateCallState('ended');
@@ -387,6 +537,8 @@ export const endCall = () => {
 };
 
 const handleCallEnded = () => {
+  stopRingtone();
+  
   if (currentCall) {
     currentCall.close();
     currentCall = null;
@@ -489,6 +641,7 @@ const hideCallUI = () => {
   }
   currentCallData = null;
   updateCallState('ended');
+  clearSavedCallState();
 };
 
 export const hideCallUIFunction = hideCallUI;
@@ -536,6 +689,14 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
       targetPeerId,
       startTime: null,
     };
+
+    saveCallState({
+      type: 'outgoing',
+      roomID,
+      targetUserId,
+      callType,
+      startTime: Date.now(),
+    });
 
     return { ok: true, roomID };
   } catch (error) {
