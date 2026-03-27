@@ -6,8 +6,18 @@ let currentCall = null;
 let localStream = null;
 let onCallEndCallback = null;
 let currentCallData = null;
+let callStartTime = null;
+let callTimerInterval = null;
+let callTimeoutTimeout = null;
+let isAudioMuted = false;
+let isVideoOff = false;
+let peerConnectionState = 'disconnected';
+let onCallStateChangeCallback = null;
 
 const getPeerId = (userId) => `chat-app-${userId}`;
+
+const CALL_TIMEOUT_MS = 30000;
+const RECONNECT_DELAY_MS = 3000;
 
 export const initializePeer = async (userId) => {
   const peerId = getPeerId(userId);
@@ -40,6 +50,25 @@ export const initializePeer = async (userId) => {
         reject(err);
       }
     });
+
+    peer.on('disconnected', () => {
+      console.log('Peer disconnected, attempting reconnect...');
+      peerConnectionState = 'reconnecting';
+      updateCallState('reconnecting');
+      
+      setTimeout(() => {
+        if (peer && !peer.disconnected) {
+          peer.reconnect();
+        }
+      }, RECONNECT_DELAY_MS);
+    });
+
+    peer.on('connection', (conn) => {
+      console.log('Peer connection received');
+      conn.on('close', () => {
+        console.log('Peer connection closed');
+      });
+    });
   });
 };
 
@@ -51,47 +80,25 @@ export const initializePeerForIncoming = async (userId) => {
       peer.on('call', async (call) => {
         console.log('Incoming call from:', call.peer);
         
+        clearTimeout(callTimeoutTimeout);
+        
         currentCallData = {
           call,
           callerPeerId: call.peer,
           callType: call.options?.video !== false ? "video" : "audio",
+          startTime: null,
         };
+        
+        updateCallState('ringing');
         
         const container = ensureCallContainer();
         
         const callerName = call.peer.replace('chat-app-', '');
-        container.innerHTML = `
-          <div style="color: white; font-size: 24px; margin-bottom: 20px;">
-            Incoming ${currentCallData.callType} call from ${callerName}
-          </div>
-          <video id="incoming-local-video" autoplay playsinline muted style="width: 100%; max-width: 600px; background: #000; display: none;"></video>
-          <div style="margin-top: 20px; display: flex; gap: 20px;">
-            <button id="accept-call-btn" style="padding: 15px 40px; font-size: 18px; background: #27ae60; color: white; border: none; border-radius: 50px; cursor: pointer;">Accept</button>
-            <button id="decline-call-btn" style="padding: 15px 40px; font-size: 18px; background: #e74c3c; color: white; border: none; border-radius: 50px; cursor: pointer;">Decline</button>
-          </div>
-        `;
+        container.innerHTML = buildIncomingCallHTML(callerName, currentCallData.callType);
         
         container.style.display = "flex";
         
-        const acceptBtn = document.getElementById("accept-call-btn");
-        const declineBtn = document.getElementById("decline-call-btn");
-        
-        acceptBtn.onclick = async () => {
-          try {
-            const { localStream: stream } = await answerCall(call, currentCallData.callType);
-            currentCallData.localStream = stream;
-            showCallUIFromIncoming(call, stream);
-          } catch (error) {
-            console.error('Error answering call:', error);
-            call.close();
-            hideCallUI();
-          }
-        };
-        
-        declineBtn.onclick = () => {
-          call.close();
-          hideCallUI();
-        };
+        setupIncomingCallHandlers(call);
       });
     }
     
@@ -102,12 +109,162 @@ export const initializePeerForIncoming = async (userId) => {
   }
 };
 
+const buildIncomingCallHTML = (callerName, callType) => `
+  <div class="call-status" style="color: white; font-size: 24px; margin-bottom: 20px;">
+    Incoming ${callType} call from ${callerName}
+  </div>
+  <video id="incoming-local-video" autoplay playsinline muted style="width: 100%; max-width: 600px; background: #000; display: none;"></video>
+  <div style="margin-top: 20px; display: flex; gap: 20px;">
+    <button id="accept-call-btn" class="call-btn accept-btn" style="padding: 15px 40px; font-size: 18px; background: #27ae60; color: white; border: none; border-radius: 50px; cursor: pointer;">Accept</button>
+    <button id="decline-call-btn" class="call-btn decline-btn" style="padding: 15px 40px; font-size: 18px; background: #e74c3c; color: white; border: none; border-radius: 50px; cursor: pointer;">Decline</button>
+  </div>
+`;
+
+const buildActiveCallHTML = (callType, callState) => {
+  const duration = getCallDuration();
+  const statusText = callState === 'connecting' ? 'Connecting...' : 
+                     callState === 'connected' ? 'Connected' : 
+                     callState === 'ringing' ? 'Ringing...' : 'Calling...';
+  
+  return `
+    <style>
+      .call-controls { display: flex; gap: 15px; margin-top: 20px; }
+      .call-btn-control { padding: 12px 24px; font-size: 16px; border: none; border-radius: 50px; cursor: pointer; }
+      .call-btn-muted { background: #e74c3c; color: white; }
+      .call-btn-unmuted { background: #3498db; color: white; }
+      .call-btn-video-off { background: #e74c3c; color: white; }
+      .call-btn-video-on { background: #3498db; color: white; }
+      .call-btn-end { background: #e74c3c; color: white; padding: 15px 40px; }
+      .call-timer { color: white; font-size: 20px; margin-bottom: 10px; }
+      .call-status { color: #3498db; font-size: 16px; margin-bottom: 15px; }
+    </style>
+    <div class="call-timer">${duration}</div>
+    <div class="call-status">${statusText}</div>
+    <video id="remote-video" autoplay playsinline style="width: 100%; max-width: 600px; background: #000; border-radius: 10px;"></video>
+    <video id="local-video" autoplay playsinline muted style="position: absolute; bottom: 120px; right: 20px; width: 120px; height: 90px; border: 2px solid white; border-radius: 8px; ${callType === 'audio' ? 'display: none;' : ''} ${isVideoOff ? 'opacity: 0;' : ''}"></video>
+    <div class="call-controls">
+      <button id="mute-btn" class="call-btn-control ${isAudioMuted ? 'call-btn-muted' : 'call-btn-unmuted'}">
+        ${isAudioMuted ? '🔇 Unmute' : '🔊 Mute'}
+      </button>
+      ${callType === 'video' ? `
+      <button id="video-btn" class="call-btn-control ${isVideoOff ? 'call-btn-video-off' : 'call-btn-video-on'}">
+        ${isVideoOff ? '📷 Turn On' : '📷 Turn Off'}
+      </button>
+      ` : ''}
+      <button id="end-call-btn" class="call-btn-control call-btn-end">End Call</button>
+    </div>
+  `;
+};
+
+const setupIncomingCallHandlers = (call) => {
+  const acceptBtn = document.getElementById("accept-call-btn");
+  const declineBtn = document.getElementById("decline-call-btn");
+  
+  if (acceptBtn) {
+    acceptBtn.onclick = async () => {
+      try {
+        clearTimeout(callTimeoutTimeout);
+        const { localStream: stream } = await answerCall(call, currentCallData.callType);
+        currentCallData.localStream = stream;
+        currentCallData.startTime = Date.now();
+        startCallTimer();
+        showActiveCallUI(call, stream);
+        updateCallState('connected');
+      } catch (error) {
+        console.error('Error answering call:', error);
+        call.close();
+        hideCallUI();
+        updateCallState('ended');
+      }
+    };
+  }
+  
+  if (declineBtn) {
+    declineBtn.onclick = () => {
+      call.close();
+      hideCallUI();
+      updateCallState('ended');
+    };
+  }
+};
+
+const setupActiveCallHandlers = (call) => {
+  const muteBtn = document.getElementById("mute-btn");
+  const videoBtn = document.getElementById("video-btn");
+  const endBtn = document.getElementById("end-call-btn");
+  
+  if (muteBtn) {
+    muteBtn.onclick = () => {
+      toggleMute();
+    };
+  }
+  
+  if (videoBtn) {
+    videoBtn.onclick = () => {
+      toggleVideo();
+    };
+  }
+  
+  if (endBtn) {
+    endBtn.onclick = () => {
+      endCall();
+    };
+  }
+};
+
+const toggleMute = () => {
+  if (localStream) {
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = isAudioMuted;
+      isAudioMuted = !isAudioMuted;
+      updateCallControls();
+    }
+  }
+};
+
+const toggleVideo = () => {
+  if (localStream) {
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = isVideoOff;
+      isVideoOff = !isVideoOff;
+      updateCallControls();
+    }
+  }
+};
+
+const updateCallControls = () => {
+  const container = document.getElementById("peer-call-container");
+  if (!container || !currentCallData) return;
+  
+  const muteBtn = document.getElementById("mute-btn");
+  const videoBtn = document.getElementById("video-btn");
+  
+  if (muteBtn) {
+    muteBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🔊 Mute';
+    muteBtn.className = `call-btn-control ${isAudioMuted ? 'call-btn-muted' : 'call-btn-unmuted'}`;
+  }
+  
+  if (videoBtn) {
+    videoBtn.textContent = isVideoOff ? '📷 Turn On' : '📷 Turn Off';
+    videoBtn.className = `call-btn-control ${isVideoOff ? 'call-btn-video-off' : 'call-btn-video-on'}`;
+  }
+  
+  const localVideo = document.getElementById("local-video");
+  if (localVideo) {
+    localVideo.style.opacity = isVideoOff ? '0' : '1';
+  }
+};
+
 export const getLocalStream = async (callType = "video") => {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({
       video: callType === "video",
       audio: true,
     });
+    isAudioMuted = false;
+    isVideoOff = callType !== "video";
     return localStream;
   } catch (error) {
     console.error('Error accessing media devices:', error);
@@ -125,49 +282,111 @@ export const createCall = async (peerId, callType = "video") => {
   const call = peer.call(peerId, stream);
   
   currentCall = call;
+  callStartTime = Date.now();
+  
+  updateCallState('connecting');
+  startCallTimer();
+  showActiveCallUI(call, stream);
+
+  startCallTimeout();
   
   call.on('stream', (remoteStream) => {
     console.log('Received remote stream');
-    updateCallUI("connected", remoteStream);
+    clearTimeout(callTimeoutTimeout);
+    updateCallState('connected');
+    updateRemoteStream(remoteStream);
   });
 
   call.on('close', () => {
     console.log('Call closed');
-    cleanupCall();
+    handleCallEnded();
   });
 
   call.on('error', (err) => {
     console.error('Call error:', err);
     notificationHelper.error("Call failed");
-    cleanupCall();
+    handleCallEnded();
   });
 
-  return { call, localStream };
+  return { call, localStream: stream };
 };
 
 export const answerCall = async (call, callType = "video") => {
   const stream = await getLocalStream(callType);
   call.answer(stream);
   currentCall = call;
+  callStartTime = Date.now();
 
   call.on('stream', (remoteStream) => {
     console.log('Received remote stream in answer');
-    updateCallUI("connected", remoteStream);
+    updateCallState('connected');
+    updateRemoteStream(remoteStream);
   });
 
   call.on('close', () => {
     console.log('Call closed');
-    cleanupCall();
+    handleCallEnded();
   });
 
   return { call, localStream: stream };
 };
 
-export const endCall = () => {
-  cleanupCall();
+const startCallTimeout = () => {
+  callTimeoutTimeout = setTimeout(() => {
+    console.log('Call timeout - no answer');
+    notificationHelper.info("No answer - call timed out");
+    endCall();
+  }, CALL_TIMEOUT_MS);
 };
 
-const cleanupCall = () => {
+const startCallTimer = () => {
+  if (callTimerInterval) {
+    clearInterval(callTimerInterval);
+  }
+  
+  callTimerInterval = setInterval(() => {
+    const container = document.getElementById("peer-call-container");
+    if (!container) return;
+    
+    const timerEl = container.querySelector('.call-timer');
+    if (timerEl) {
+      timerEl.textContent = getCallDuration();
+    }
+  }, 1000);
+};
+
+const getCallDuration = () => {
+  if (!callStartTime) return "00:00";
+  
+  const diff = Math.floor((Date.now() - callStartTime) / 1000);
+  const minutes = Math.floor(diff / 60);
+  const seconds = diff % 60;
+  
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
+const updateCallState = (state) => {
+  peerConnectionState = state;
+  if (onCallStateChangeCallback) {
+    onCallStateChangeCallback(state);
+  }
+};
+
+const updateRemoteStream = (remoteStream) => {
+  const container = document.getElementById("peer-call-container");
+  if (!container) return;
+  
+  const remoteVideo = document.getElementById("remote-video");
+  if (remoteVideo) {
+    remoteVideo.srcObject = remoteStream;
+  }
+};
+
+export const endCall = () => {
+  handleCallEnded();
+};
+
+const handleCallEnded = () => {
   if (currentCall) {
     currentCall.close();
     currentCall = null;
@@ -178,7 +397,22 @@ const cleanupCall = () => {
     localStream = null;
   }
   
-  updateCallUI("ended");
+  if (callTimerInterval) {
+    clearInterval(callTimerInterval);
+    callTimerInterval = null;
+  }
+  
+  if (callTimeoutTimeout) {
+    clearTimeout(callTimeoutTimeout);
+    callTimeoutTimeout = null;
+  }
+  
+  callStartTime = null;
+  isAudioMuted = false;
+  isVideoOff = false;
+  
+  hideCallUI();
+  updateCallState('ended');
   
   if (onCallEndCallback) {
     onCallEndCallback();
@@ -209,64 +443,55 @@ const ensureCallContainer = () => {
   return container;
 };
 
-const showCallUI = (type, peerId, localStreamObj, callObj) => {
+const showActiveCallUI = (callObj, localStreamObj) => {
   const container = ensureCallContainer();
+  const callType = currentCallData?.callType || "video";
   
-  container.innerHTML = `
-    <div style="color: white; font-size: 24px; margin-bottom: 20px;">
-      ${type === "incoming" ? "Incoming Call" : "Calling..."}
-    </div>
-    <video id="remote-video" autoplay playsinline style="width: 100%; max-width: 600px; background: #000;"></video>
-    <video id="local-video" autoplay playsinline muted style="position: absolute; bottom: 100px; right: 20px; width: 120px; height: 90px; border: 2px solid white; border-radius: 8px;"></video>
-    <div style="margin-top: 20px;">
-      <button id="end-call-btn" style="padding: 15px 40px; font-size: 18px; background: #e74c3c; color: white; border: none; border-radius: 50px; cursor: pointer;">End Call</button>
-    </div>
-  `;
-  
+  container.innerHTML = buildActiveCallHTML(callType, peerConnectionState);
   container.style.display = "flex";
   
   const localVideo = document.getElementById("local-video");
   const remoteVideo = document.getElementById("remote-video");
-  const endBtn = document.getElementById("end-call-btn");
   
   if (localVideo && localStreamObj) {
     localVideo.srcObject = localStreamObj;
   }
   
-  if (callObj && callObj.remoteStream) {
-    if (remoteVideo) {
-      remoteVideo.srcObject = callObj.remoteStream;
-    }
-  }
-  
   if (callObj) {
     callObj.on('stream', (remoteStream) => {
+      console.log('Received remote stream in active call');
       if (remoteVideo) {
         remoteVideo.srcObject = remoteStream;
       }
     });
   }
   
-  endBtn.onclick = () => {
-    endCall();
-    container.style.display = "none";
-  };
-};
-
-const updateCallUI = (state, remoteStream) => {
-  const container = document.getElementById("peer-call-container");
-  if (!container) return;
+  setupActiveCallHandlers(callObj);
   
-  if (state === "ended") {
-    container.style.display = "none";
-    container.innerHTML = "";
-  } else if (state === "connected" && remoteStream) {
-    const remoteVideo = document.getElementById("remote-video");
-    if (remoteVideo) {
-      remoteVideo.srcObject = remoteStream;
-    }
+  if (callObj) {
+    callObj.on('close', () => {
+      console.log('Active call closed');
+      handleCallEnded();
+    });
   }
 };
+
+const hideCallUI = () => {
+  if (callTimerInterval) {
+    clearInterval(callTimerInterval);
+    callTimerInterval = null;
+  }
+  
+  const container = document.getElementById("peer-call-container");
+  if (container) {
+    container.style.display = "none";
+    container.innerHTML = "";
+  }
+  currentCallData = null;
+  updateCallState('ended');
+};
+
+export const hideCallUIFunction = hideCallUI;
 
 export const startVideoSession = async (roomID, user = {}, options = {}) => {
   try {
@@ -301,18 +526,22 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
       await initializePeer(userId);
     }
 
+    updateCallState('calling');
+    
     const { call, localStream: stream } = await createCall(targetPeerId, callType);
     
-    showCallUI("outgoing", targetPeerId, stream, call);
-    
-    call.on('close', () => {
-      endCall();
-    });
+    currentCallData = {
+      call,
+      callType,
+      targetPeerId,
+      startTime: null,
+    };
 
     return { ok: true, roomID };
   } catch (error) {
     console.error("Video session error:", error);
     notificationHelper.error(error?.message || "Unable to start video call.");
+    updateCallState('error');
     return { ok: false, error };
   }
 };
@@ -321,68 +550,24 @@ export const setCallEndCallback = (callback) => {
   onCallEndCallback = callback;
 };
 
+export const setCallStateCallback = (callback) => {
+  onCallStateChangeCallback = callback;
+};
+
+export const getCallState = () => peerConnectionState;
+
 export const cleanupPeer = () => {
+  handleCallEnded();
+  
   if (peer) {
     peer.destroy();
     peer = null;
   }
+  
   if (localStream) {
     localStream.getTracks().forEach(track => track.stop());
     localStream = null;
   }
+  
+  updateCallState('disconnected');
 };
-
-const showCallUIFromIncoming = (call, localStreamObj) => {
-  const container = ensureCallContainer();
-  
-  container.innerHTML = `
-    <div style="color: white; font-size: 24px; margin-bottom: 20px;">
-      Call Active
-    </div>
-    <video id="remote-video" autoplay playsinline style="width: 100%; max-width: 600px; background: #000;"></video>
-    <video id="local-video" autoplay playsinline muted style="position: absolute; bottom: 100px; right: 20px; width: 120px; height: 90px; border: 2px solid white; border-radius: 8px;"></video>
-    <div style="margin-top: 20px;">
-      <button id="end-call-btn" style="padding: 15px 40px; font-size: 18px; background: #e74c3c; color: white; border: none; border-radius: 50px; cursor: pointer;">End Call</button>
-    </div>
-  `;
-  
-  container.style.display = "flex";
-  
-  const localVideo = document.getElementById("local-video");
-  const remoteVideo = document.getElementById("remote-video");
-  const endBtn = document.getElementById("end-call-btn");
-  
-  if (localVideo && localStreamObj) {
-    localVideo.srcObject = localStreamObj;
-  }
-  
-  call.on('stream', (remoteStream) => {
-    console.log('Received remote stream in incoming call');
-    if (remoteVideo) {
-      remoteVideo.srcObject = remoteStream;
-    }
-  });
-  
-  call.on('close', () => {
-    console.log('Incoming call closed');
-    hideCallUI();
-    cleanupCall();
-  });
-  
-  endBtn.onclick = () => {
-    call.close();
-    hideCallUI();
-    cleanupCall();
-  };
-};
-
-const hideCallUI = () => {
-  const container = document.getElementById("peer-call-container");
-  if (container) {
-    container.style.display = "none";
-    container.innerHTML = "";
-  }
-  currentCallData = null;
-};
-
-export const hideCallUIFunction = hideCallUI;

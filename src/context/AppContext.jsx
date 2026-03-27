@@ -6,7 +6,7 @@ import {
   toUserErrorMessage,
 } from "../config/supabase";
 import { setKnownUser } from "../lib/knownUser";
-import { startVideoSession, initializePeerForIncoming, hideCallUIFunction } from "../lib/peerCall";
+import { startVideoSession, initializePeerForIncoming, hideCallUIFunction, cleanupPeer } from "../lib/peerCall";
 import {
   getUserPreferencesFromStorage,
   normalizeUserPreferences,
@@ -165,6 +165,7 @@ const AppContextProvider = (props) => {
   const preferenceColumnsUnsupportedRef = useRef(false);
 
   const clearAppState = useCallback(() => {
+    cleanupPeer();
     setUserData(null);
     setChatData([]);
     setMessagesId(null);
