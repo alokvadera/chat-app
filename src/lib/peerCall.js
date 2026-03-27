@@ -280,8 +280,22 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
       return { ok: false, error: new Error("Missing user ID") };
     }
 
-    const targetPeerId = getPeerId(roomID.replace('call-', ''));
+    let targetUserId = options?.targetUserId;
+    
+    if (!targetUserId && roomID) {
+      const parts = roomID.split('_');
+      targetUserId = parts.find(id => id && id !== userId) || roomID;
+    }
+    
+    if (!targetUserId) {
+      notificationHelper.error("Could not determine target user");
+      return { ok: false, error: new Error("Missing target user ID") };
+    }
+
+    const targetPeerId = getPeerId(targetUserId);
     const callType = options?.callType === "audio" ? "audio" : "video";
+
+    console.log('Starting call - myId:', userId, 'targetId:', targetUserId, 'peerId:', targetPeerId);
 
     if (!peer) {
       await initializePeer(userId);
@@ -370,3 +384,5 @@ const hideCallUI = () => {
   }
   currentCallData = null;
 };
+
+export const hideCallUIFunction = hideCallUI;

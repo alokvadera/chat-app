@@ -6,7 +6,7 @@ import {
   toUserErrorMessage,
 } from "../config/supabase";
 import { setKnownUser } from "../lib/knownUser";
-import { startVideoSession, initializePeerForIncoming } from "../lib/peerCall";
+import { startVideoSession, initializePeerForIncoming, hideCallUIFunction } from "../lib/peerCall";
 import {
   getUserPreferencesFromStorage,
   normalizeUserPreferences,
@@ -657,7 +657,26 @@ const AppContextProvider = (props) => {
 
       await startVideoSession(roomID, { id: callerId, name: callerName }, {
         callType: normalizedCallType,
+        targetUserId: normalizedTargetId,
       });
+
+      const declineChannel = supabase
+        .channel("call_decline_channel", {
+          config: { broadcast: { self: false } },
+        })
+        .on("broadcast", { event: "VIDEO_CALL_DECLINED" }, ({ payload }) => {
+          if (!payload || payload.roomID !== roomID) return;
+          
+          console.log("Call declined by:", payload.declinedBy);
+          notificationHelper.info("Call was declined");
+          hideCallUIFunction();
+        })
+        .subscribe();
+
+      setTimeout(() => {
+        supabase.removeChannel(declineChannel);
+      }, 30000);
+
       return { ok: true, roomID };
     } catch (error) {
       logError("initiateCall error:", error);
@@ -686,7 +705,8 @@ const AppContextProvider = (props) => {
 
     const onAccept = async () => {
       const roomID = latestPayload?.roomID;
-      if (!roomID) return;
+      const callerId = latestPayload?.callerId;
+      if (!roomID || !callerId) return;
 
       const currentName = String(
         userData?.name || userData?.username || userData?.email || "Chat User",
@@ -694,11 +714,32 @@ const AppContextProvider = (props) => {
       const callType = latestPayload?.type === "audio" ? "audio" : "video";
 
       hideNotification();
-      await startVideoSession(roomID, { id: userData.id, name: currentName }, { callType });
+      await startVideoSession(roomID, { id: userData.id, name: currentName }, {
+        callType,
+        targetUserId: callerId,
+      });
     };
 
-    const onDecline = () => {
+    const onDecline = async () => {
+      const callerId = latestPayload?.callerId;
+      const roomID = latestPayload?.roomID;
+      
       hideNotification();
+      
+      if (callerId && roomID) {
+        const callChannel = callChannelRef.current;
+        if (callChannel && callChannelReadyRef.current) {
+          await callChannel.send({
+            type: "broadcast",
+            event: "VIDEO_CALL_DECLINED",
+            payload: {
+              roomID,
+              declinedBy: userData.id,
+              targetId: callerId,
+            },
+          });
+        }
+      }
     };
 
     if (acceptBtn) acceptBtn.onclick = onAccept;
