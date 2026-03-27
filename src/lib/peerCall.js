@@ -168,8 +168,7 @@ export const initializePeer = async (userId) => {
       debug: 1,
     });
 
-    peer.on('open', (id) => {
-      console.log('Peer connected with ID:', id);
+    peer.on('open', () => {
       resolve(peer);
     });
 
@@ -177,8 +176,7 @@ export const initializePeer = async (userId) => {
       console.error('Peer error:', err);
       if (err.type === 'unavailable-id') {
         peer = new Peer(undefined, { debug: 1 });
-        peer.on('open', (id) => {
-          console.log('Peer connected with auto ID:', id);
+        peer.on('open', () => {
           resolve(peer);
         });
         peer.on('error', reject);
@@ -188,7 +186,6 @@ export const initializePeer = async (userId) => {
     });
 
     peer.on('disconnected', () => {
-      console.log('Peer disconnected, attempting reconnect...');
       peerConnectionState = 'reconnecting';
       updateCallState('reconnecting');
       
@@ -200,9 +197,7 @@ export const initializePeer = async (userId) => {
     });
 
     peer.on('connection', (conn) => {
-      console.log('Peer connection received');
       conn.on('close', () => {
-        console.log('Peer connection closed');
       });
     });
   });
@@ -214,8 +209,6 @@ export const initializePeerForIncoming = async (userId) => {
     
     if (peer) {
       peer.on('call', async (call) => {
-        console.log('Incoming call from:', call.peer);
-        
         clearTimeout(callTimeoutTimeout);
         startRingtone();
         
@@ -542,19 +535,16 @@ export const createCall = async (peerId, callType = "video") => {
   startCallTimeout();
   
   call.on('stream', (remoteStream) => {
-    console.log('Received remote stream');
     clearTimeout(callTimeoutTimeout);
     updateCallState('connected');
     updateRemoteStream(remoteStream);
   });
 
   call.on('close', () => {
-    console.log('Call closed');
     handleCallEnded();
   });
 
-  call.on('error', (err) => {
-    console.error('Call error:', err);
+  call.on('error', () => {
     notificationHelper.error("Call failed");
     handleCallEnded();
   });
@@ -569,13 +559,15 @@ export const answerCall = async (call, callType = "video") => {
   callStartTime = Date.now();
 
   call.on('stream', (remoteStream) => {
-    console.log('Received remote stream in answer');
-    updateCallState('connected');
     updateRemoteStream(remoteStream);
   });
 
   call.on('close', () => {
-    console.log('Call closed');
+    handleCallEnded();
+  });
+
+  call.on('error', () => {
+    notificationHelper.error("Call failed");
     handleCallEnded();
   });
 
@@ -780,15 +772,13 @@ export const startVideoSession = async (roomID, user = {}, options = {}) => {
     const targetPeerId = getPeerId(targetUserId);
     const callType = options?.callType === "audio" ? "audio" : "video";
 
-    console.log('Starting call - myId:', userId, 'targetId:', targetUserId, 'peerId:', targetPeerId);
-
     if (!peer) {
       await initializePeer(userId);
     }
 
     updateCallState('calling');
     
-    const { call, localStream: stream } = await createCall(targetPeerId, callType);
+    const { call } = await createCall(targetPeerId, callType);
     
     currentCallData = {
       call,

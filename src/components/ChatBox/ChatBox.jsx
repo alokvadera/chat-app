@@ -19,7 +19,6 @@ import {
   deleteMessageForEveryone,
   togglePinMessage,
   getPinnedMessages,
-  paginateMessages,
   REACTION_EMOJIS,
   STATUS_ICONS,
   getTotalReactions,
@@ -31,7 +30,6 @@ import {
   startRecording,
   stopRecording,
   cancelRecording,
-  isRecording,
 } from "../../lib/voiceRecorder";
 import { notifyNewMessage } from "../../lib/pushNotifications";
 
@@ -661,7 +659,7 @@ const ChatBox = () => {
         ]);
         await persistMessages(updatedMessages);
         await updateChatsData("🎤 Voice message");
-      } catch (error) {
+      } catch {
         setRecording(false);
         clearInterval(recordingTimerRef.current);
         setRecordingTime(0);
@@ -937,7 +935,7 @@ const ChatBox = () => {
   };
 
   // ─── Render message content ───────────────────────────────────────────
-  const renderMessageContent = (msg, isSent) => {
+  const renderMessageContent = (msg, _isSent) => {
     // Deleted message
     if (msg._deleted || msg.deletedForEveryone) {
       return (

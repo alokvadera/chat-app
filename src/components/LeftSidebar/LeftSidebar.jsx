@@ -10,11 +10,7 @@ import {
 import { AppContext } from "../../context/AppContextObject";
 import { notificationHelper } from "../../lib/notificationManager";
 import { getUnreadCount } from "../../lib/messageUtils";
-import {
-  requestNotificationPermission,
-  isNotificationEnabled,
-  setNotificationEnabled,
-} from "../../lib/pushNotifications";
+import { requestNotificationPermission } from "../../lib/pushNotifications";
 
 const LeftSidebar = () => {
   const navigate = useNavigate();
@@ -30,7 +26,6 @@ const LeftSidebar = () => {
     setChatVisible,
     setMessages,
     isUserOnline,
-    presenceUsers,
   } = useContext(AppContext);
 
   const [user, setUser] = useState(null);

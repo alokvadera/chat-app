@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState, useMemo } from "react";
 import "./Chat.css";
 import LeftSidebar from "../../components/LeftSidebar/LeftSidebar";
 import ChatBox from "../../components/ChatBox/ChatBox";
@@ -9,16 +9,14 @@ import { applyTheme, getPreferredTheme } from "../../lib/theme";
 const Chat = () => {
   const { chatData, userData } = useContext(AppContext);
   const loading = !chatData || !userData;
-  const [theme, setTheme] = useState("dark");
-
-  useEffect(() => {
-    setTheme(getPreferredTheme());
-  }, []);
+  
+  const theme = useMemo(() => getPreferredTheme(), []);
+  const [currentTheme, setCurrentTheme] = useState(theme);
 
   const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
+    const nextTheme = currentTheme === "dark" ? "light" : "dark";
     applyTheme(nextTheme);
-    setTheme(nextTheme);
+    setCurrentTheme(nextTheme);
   };
 
   return (
@@ -35,12 +33,10 @@ const Chat = () => {
               type="button"
               className="theme-toggle"
               onClick={toggleTheme}
-              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={currentTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={currentTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
-              <span style={{ position: 'relative', zIndex: 1 }}>
-                {theme === "dark" ? "☀ Light" : "🌙 Dark"}
-              </span>
+              {currentTheme === "dark" ? "☀ Light" : "🌙 Dark"}
             </button>
           </div>
           <div className="chat-container">

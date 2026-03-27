@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useState } from "react";
+import React, { useContext, useMemo, useState, useEffect, useRef } from "react";
 import "./RightSidebar.css";
 import assets from "../../assets/assets";
 import { isDesignPreviewMode, supabase } from "../../config/supabase";
@@ -23,7 +23,6 @@ const RightSidebar = () => {
     chatInfoPanelOpen,
     setChatInfoPanelOpen,
     userData,
-    presenceUsers,
   } = useContext(AppContext);
   const [searchTerm, setSearchTerm] = useState("");
   const [mediaTab, setMediaTab] = useState("photos");
@@ -123,10 +122,20 @@ const RightSidebar = () => {
 
   const isOnline = isUserOnline(chatUser?.userData);
 
+  const nowRef = useRef(0);
+  
+  useEffect(() => {
+    nowRef.current = Date.now();
+    const interval = setInterval(() => {
+      nowRef.current = Date.now();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const formatLastSeen = () => {
     const lastSeen = Number(chatUser?.userData?.last_seen || 0);
     if (!lastSeen) return "Offline";
-    const diff = Date.now() - lastSeen;
+    const diff = nowRef.current - lastSeen;
     if (diff < 60000) return "Last seen just now";
     if (diff < 3600000) return `Last seen ${Math.floor(diff / 60000)}m ago`;
     if (diff < 86400000) return `Last seen ${Math.floor(diff / 3600000)}h ago`;

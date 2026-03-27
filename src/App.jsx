@@ -7,6 +7,7 @@ import ResetPassword from "./pages/ResetPassword/ResetPassword";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 import Landing from "./pages/Landing/Landing";
 import Notification from "./components/Notification/Notification";
+import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import { NotificationProvider } from "./context/NotificationContext";
 import { isDesignPreviewMode, supabase } from "./config/supabase";
 import { AppContext } from "./context/AppContextObject";
@@ -115,15 +116,17 @@ const App = () => {
   return (
     <>
       <Notification />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/auth" element={<Login />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/profile-update" element={<ProfileUpdate />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/auth" element={<Login />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/profile-update" element={<ProfileUpdate />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+        </Routes>
+      </ErrorBoundary>
     </>
   );
 };
