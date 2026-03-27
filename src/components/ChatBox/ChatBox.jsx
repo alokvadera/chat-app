@@ -491,6 +491,20 @@ const ChatBox = () => {
       const messageText = input.trim();
       if (!messageText || !activeMessageId || !userData?.id) return;
 
+      const targetUserId = chatUser?.rId || chatUser?.userData?.id;
+      if (targetUserId && !isDesignPreviewMode) {
+        const { data: blockData } = await supabase
+          .from("blocked_users")
+          .select("id")
+          .eq("blocked_by", targetUserId)
+          .eq("blocked_user", userData.id)
+          .maybeSingle();
+        if (blockData) {
+          notificationHelper.error("You cannot send messages to this user");
+          return;
+        }
+      }
+
       if (isTypingRef.current) {
         isTypingRef.current = false;
         void sendTypingSignal(false);
@@ -756,6 +770,32 @@ const ChatBox = () => {
     if (!activeMessageId || !userData?.id) return;
     markMessagesAsSeen();
   }, [activeMessageId, messages.length, markMessagesAsSeen, userData?.id]);
+
+  // Mark as read after viewing for 3 seconds
+  useEffect(() => {
+    if (isDesignPreviewMode || !activeMessageId || !userData?.id || !chatVisible) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const currentRow = await getOrCreateMessageRow();
+        const msgs = normalizeMessages(toMessagesArray(currentRow?.messages));
+        let changed = false;
+        const updated = msgs.map((m) => {
+          if (m.sId !== userData.id && (m.status === "seen" || m.status === "delivered")) {
+            changed = true;
+            return { ...m, status: "read", readAt: Date.now() };
+          }
+          return m;
+        });
+        if (changed) {
+          await persistMessages(updated);
+          updateMessagesIfChanged(updated);
+        }
+      } catch { /* ignore */ }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [activeMessageId, chatVisible, getOrCreateMessageRow, normalizeMessages, persistMessages, updateMessagesIfChanged, userData?.id]);
 
   // ─── Load more (pagination) ──────────────────────────────────────────
   const loadMoreMessages = useCallback(() => {

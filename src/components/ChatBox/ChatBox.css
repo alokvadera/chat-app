@@ -1245,6 +1245,11 @@ html[data-theme='light'] .send-btn {
   opacity: 1;
 }
 
+.msg-status.read {
+  color: #22c55e;
+  opacity: 1;
+}
+
 /* ── Edited label ── */
 .msg-edited {
   font-size: 10px;

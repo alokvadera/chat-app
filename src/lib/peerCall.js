@@ -11,6 +11,8 @@ let callTimerInterval = null;
 let callTimeoutTimeout = null;
 let isAudioMuted = false;
 let isVideoOff = false;
+let isScreenSharing = false;
+let screenShareStream = null;
 let peerConnectionState = 'disconnected';
 let onCallStateChangeCallback = null;
 let ringtoneInterval = null;
@@ -274,12 +276,14 @@ const buildActiveCallHTML = (callType, callState) => {
   
   return `
     <style>
-      .call-controls { display: flex; gap: 15px; margin-top: 20px; }
+      .call-controls { display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
       .call-btn-control { padding: 12px 24px; font-size: 16px; border: none; border-radius: 50px; cursor: pointer; }
       .call-btn-muted { background: #e74c3c; color: white; }
       .call-btn-unmuted { background: #3498db; color: white; }
       .call-btn-video-off { background: #e74c3c; color: white; }
       .call-btn-video-on { background: #3498db; color: white; }
+      .call-btn-screen { background: #9b59b6; color: white; }
+      .call-btn-screen-active { background: #27ae60; color: white; }
       .call-btn-end { background: #e74c3c; color: white; padding: 15px 40px; }
       .call-timer { color: white; font-size: 20px; margin-bottom: 10px; }
       .call-status { color: #3498db; font-size: 16px; margin-bottom: 15px; }
@@ -295,6 +299,9 @@ const buildActiveCallHTML = (callType, callState) => {
       ${callType === 'video' ? `
       <button id="video-btn" class="call-btn-control ${isVideoOff ? 'call-btn-video-off' : 'call-btn-video-on'}">
         ${isVideoOff ? '📷 Turn On' : '📷 Turn Off'}
+      </button>
+      <button id="screen-btn" class="call-btn-control ${isScreenSharing ? 'call-btn-screen-active' : 'call-btn-screen'}">
+        ${isScreenSharing ? '⏹ Stop Share' : '🖥 Share Screen'}
       </button>
       ` : ''}
       <button id="end-call-btn" class="call-btn-control call-btn-end">End Call</button>
@@ -341,6 +348,7 @@ const setupIncomingCallHandlers = (call) => {
 const setupActiveCallHandlers = (call) => {
   const muteBtn = document.getElementById("mute-btn");
   const videoBtn = document.getElementById("video-btn");
+  const screenBtn = document.getElementById("screen-btn");
   const endBtn = document.getElementById("end-call-btn");
   
   if (muteBtn) {
@@ -352,6 +360,12 @@ const setupActiveCallHandlers = (call) => {
   if (videoBtn) {
     videoBtn.onclick = () => {
       toggleVideo();
+    };
+  }
+  
+  if (screenBtn) {
+    screenBtn.onclick = () => {
+      toggleScreenShare(call);
     };
   }
   
@@ -384,12 +398,89 @@ const toggleVideo = () => {
   }
 };
 
+const toggleScreenShare = async (call) => {
+  try {
+    if (isScreenSharing) {
+      if (screenShareStream) {
+        screenShareStream.getTracks().forEach(track => track.stop());
+        screenShareStream = null;
+      }
+      isScreenSharing = false;
+      
+      if (localStream) {
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack && call && call.peerConnection) {
+          const sender = call.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+          if (sender && videoTrack) {
+            await sender.replaceTrack(videoTrack);
+          }
+        }
+      }
+      
+      if (localStream) {
+        const localVideo = document.getElementById("local-video");
+        if (localVideo) {
+          localVideo.srcObject = localStream;
+        }
+      }
+    } else {
+      screenShareStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+      
+      isScreenSharing = true;
+      
+      const screenTrack = screenShareStream.getVideoTracks()[0];
+      
+      screenTrack.onended = () => {
+        isScreenSharing = false;
+        if (screenShareStream) {
+          screenShareStream.getTracks().forEach(track => track.stop());
+          screenShareStream = null;
+        }
+        updateCallControls();
+        
+        if (localStream && call) {
+          const videoTrack = localStream.getVideoTracks()[0];
+          if (videoTrack) {
+            const sender = call.peerConnection?.getSenders().find(s => s.track?.kind === 'video');
+            if (sender) {
+              sender.replaceTrack(videoTrack);
+            }
+          }
+        }
+      };
+      
+      if (call && call.peerConnection) {
+        const sender = call.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) {
+          await sender.replaceTrack(screenTrack);
+        }
+      }
+      
+      const localVideo = document.getElementById("local-video");
+      if (localVideo) {
+        localVideo.srcObject = screenShareStream;
+      }
+    }
+    
+    updateCallControls();
+  } catch (error) {
+    console.error('Screen share error:', error);
+    notificationHelper.error("Could not share screen");
+    isScreenSharing = false;
+    updateCallControls();
+  }
+};
+
 const updateCallControls = () => {
   const container = document.getElementById("peer-call-container");
   if (!container || !currentCallData) return;
   
   const muteBtn = document.getElementById("mute-btn");
   const videoBtn = document.getElementById("video-btn");
+  const screenBtn = document.getElementById("screen-btn");
   
   if (muteBtn) {
     muteBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🔊 Mute';
@@ -401,9 +492,19 @@ const updateCallControls = () => {
     videoBtn.className = `call-btn-control ${isVideoOff ? 'call-btn-video-off' : 'call-btn-video-on'}`;
   }
   
+  if (screenBtn) {
+    screenBtn.textContent = isScreenSharing ? '⏹ Stop Share' : '🖥 Share Screen';
+    screenBtn.className = `call-btn-control ${isScreenSharing ? 'call-btn-screen-active' : 'call-btn-screen'}`;
+  }
+  
   const localVideo = document.getElementById("local-video");
   if (localVideo) {
-    localVideo.style.opacity = isVideoOff ? '0' : '1';
+    if (isScreenSharing && screenShareStream) {
+      localVideo.srcObject = screenShareStream;
+    } else if (localStream) {
+      localVideo.srcObject = localStream;
+    }
+    localVideo.style.opacity = isVideoOff && !isScreenSharing ? '0' : '1';
   }
 };
 
@@ -562,6 +663,12 @@ const handleCallEnded = () => {
   callStartTime = null;
   isAudioMuted = false;
   isVideoOff = false;
+  isScreenSharing = false;
+  
+  if (screenShareStream) {
+    screenShareStream.getTracks().forEach(track => track.stop());
+    screenShareStream = null;
+  }
   
   hideCallUI();
   updateCallState('ended');

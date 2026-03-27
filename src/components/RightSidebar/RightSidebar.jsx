@@ -28,8 +28,51 @@ const RightSidebar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [mediaTab, setMediaTab] = useState("photos");
   const [showPinnedPanel, setShowPinnedPanel] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const isGroup = Boolean(chatUser?.isGroup);
   const chatUserAvatar = chatUser?.userData?.avatar || assets.avatar_icon;
+
+  const targetUserId = chatUser?.rId || chatUser?.userData?.id;
+
+  React.useEffect(() => {
+    const checkBlockStatus = async () => {
+      if (!targetUserId || isGroup || isDesignPreviewMode) {
+        setIsBlocked(false);
+        return;
+      }
+      try {
+        const { data } = await supabase
+          .from("blocked_users")
+          .select("id")
+          .eq("blocked_by", userData?.id)
+          .eq("blocked_user", targetUserId)
+          .maybeSingle();
+        setIsBlocked(!!data);
+      } catch { /* ignore */ }
+    };
+    checkBlockStatus();
+  }, [targetUserId, isGroup, userData?.id]);
+
+  const handleBlockToggle = async () => {
+    if (!targetUserId || isGroup || isDesignPreviewMode) return;
+    try {
+      if (isBlocked) {
+        await supabase
+          .from("blocked_users")
+          .delete()
+          .eq("blocked_by", userData?.id)
+          .eq("blocked_user", targetUserId);
+        setIsBlocked(false);
+      } else {
+        await supabase
+          .from("blocked_users")
+          .insert({ blocked_by: userData?.id, blocked_user: targetUserId });
+        setIsBlocked(true);
+      }
+    } catch (error) {
+      console.error("Block error:", error);
+    }
+  };
 
   const msgImages = useMemo(
     () => messages.filter((msg) => msg.image).map((msg) => ({ url: msg.image, createdAt: msg.createdAt })),
@@ -250,6 +293,18 @@ const RightSidebar = () => {
               )}
             </div>
           </div>
+
+          {!isGroup && (
+            <div className="rs-block-section">
+              <button 
+                type="button" 
+                className={`rs-block-btn ${isBlocked ? "blocked" : ""}`}
+                onClick={handleBlockToggle}
+              >
+                {isBlocked ? "🔓 Unblock User" : "🚫 Block User"}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="rs-media">

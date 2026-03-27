@@ -210,6 +210,7 @@ export const STATUS_ICONS = {
   sent: "✓",
   delivered: "✓✓",
   seen: "✓✓",
+  read: "👁️",
 };
 
 /**

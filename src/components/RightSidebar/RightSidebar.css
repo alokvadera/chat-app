@@ -648,3 +648,33 @@ html[data-theme='light'] .rs-media-tab:hover {
   color: var(--text-muted);
   background: var(--surface-1);
 }
+
+.rs-block-section {
+  padding: 15px;
+  border-top: 1px solid var(--border-color);
+}
+
+.rs-block-btn {
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.rs-block-btn:hover {
+  background: var(--hover-bg);
+}
+
+.rs-block-btn.blocked {
+  background: #27ae60;
+  color: white;
+}
+
+.rs-block-btn.blocked:hover {
+  background: #219a52;
+}
